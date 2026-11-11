@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Direction, LearningData, QuizResult, WordList, WordPair, emptyLearningData, makeId } from './learning-data';
+import { PairInput } from './pair-input';
 
 const STORAGE_KEY = 'zodziu-praktika.learning.v1';
 const nonempty = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;
@@ -28,6 +29,7 @@ export class LearningStore {
       direction: 'a-to-b', pairs: []
     };
     if (![list.name, list.languageA, list.languageB].every(nonempty)) throw new Error('Missing list details');
+    if (list.languageA.toLocaleLowerCase('lt') === list.languageB.toLocaleLowerCase('lt')) throw new Error('Languages must differ');
     return { data: this.save({ ...data, lists: [...data.lists, list] }), list };
   }
 
@@ -36,6 +38,7 @@ export class LearningStore {
     const languageA = changes.languageA.trim();
     const languageB = changes.languageB.trim();
     if (![name, languageA, languageB].every(nonempty)) throw new Error('Missing list details');
+    if (languageA.toLocaleLowerCase('lt') === languageB.toLocaleLowerCase('lt')) throw new Error('Languages must differ');
     return this.replaceList(data, id, list => ({ ...list, name, languageA, languageB }));
   }
 
@@ -45,9 +48,15 @@ export class LearningStore {
   }
 
   addPair(data: LearningData, id: string, a: string, b: string): LearningData {
-    if (!a.trim() || !b.trim()) throw new Error('Missing word');
-    const pair: WordPair = { id: makeId(), a: a.trim(), b: b.trim(), streak: 0 };
-    return this.replaceList(data, id, list => ({ ...list, pairs: [...list.pairs, pair] }));
+    return this.addPairs(data, id, [{ a, b }]);
+  }
+
+  addPairs(data: LearningData, id: string, entries: PairInput[]): LearningData {
+    if (!entries.length || entries.length > 100 || entries.some(entry => !entry.a.trim() || !entry.b.trim() || entry.a.trim().length > 100 || entry.b.trim().length > 100)) {
+      throw new Error('Invalid word pairs');
+    }
+    const pairs: WordPair[] = entries.map(entry => ({ id: makeId(), a: entry.a.trim(), b: entry.b.trim(), streak: 0 }));
+    return this.replaceList(data, id, list => ({ ...list, pairs: [...list.pairs, ...pairs] }));
   }
 
   deletePair(data: LearningData, listId: string, pairId: string): LearningData {

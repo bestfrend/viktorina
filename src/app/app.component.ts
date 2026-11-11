@@ -1,18 +1,21 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule } from 'primeng/textarea';
 import { LearningData, QuizResult, WordList, emptyLearningData } from './learning-data';
 import { LearningStore } from './learning-store.service';
+import { parseCommaSeparatedPairs } from './pair-input';
 import { QuizSession } from './quiz-session';
 import { StudentState } from './student';
 import { StudentStore } from './student-store.service';
 
 type View = 'students' | 'lists' | 'new-list' | 'edit' | 'ready' | 'quiz' | 'results';
 
-@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, FormsModule, ButtonModule, InputTextModule], templateUrl: './app.component.html' })
+@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, FormsModule, ButtonModule, InputTextModule, TextareaModule], templateUrl: './app.component.html' })
 export class AppComponent implements OnDestroy {
+  @ViewChild('answerInput') private answerInput?: ElementRef<HTMLInputElement>;
   view: View = 'students';
   students: StudentState = { version: 1, students: [], selectedStudentId: null };
   data: LearningData = emptyLearningData();
@@ -25,6 +28,10 @@ export class AppComponent implements OnDestroy {
   languageB = 'Anglų';
   wordA = '';
   wordB = '';
+  bulkWordsA = '';
+  bulkWordsB = '';
+  detailsExpanded = false;
+  pairEntryMode: 'single' | 'bulk' = 'single';
   answerText = '';
   listId: string | null = null;
   session: QuizSession | null = null;
@@ -35,7 +42,7 @@ export class AppComponent implements OnDestroy {
   private clock: ReturnType<typeof setInterval> | null = null;
   private feedbackClock: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(private readonly studentStore: StudentStore, private readonly learningStore: LearningStore) { this.reload(); }
+  constructor(private readonly studentStore: StudentStore, private readonly learningStore: LearningStore, private readonly changeDetector: ChangeDetectorRef) { this.reload(); }
 
   get student() { return this.students.students.find(item => item.id === this.students.selectedStudentId); }
   get lists(): WordList[] { return this.data.lists.filter(item => item.studentId === this.student?.id); }
@@ -85,6 +92,7 @@ export class AppComponent implements OnDestroy {
       const created = this.learningStore.createList(this.data, this.student.id, this.listName, this.languageA, this.languageB);
       this.data = created.data;
       this.listId = created.list.id;
+      this.detailsExpanded = false;
       this.view = 'edit';
       this.error = '';
     } catch { this.saveError(); }
@@ -99,6 +107,9 @@ export class AppComponent implements OnDestroy {
     this.languageB = this.list.languageB;
     this.wordA = '';
     this.wordB = '';
+    this.bulkWordsA = '';
+    this.bulkWordsB = '';
+    this.detailsExpanded = false;
     this.error = '';
     this.view = 'edit';
   }
@@ -109,7 +120,18 @@ export class AppComponent implements OnDestroy {
       this.data = this.learningStore.updateList(this.data, this.listId, { name: this.listName, languageA: this.languageA, languageB: this.languageB });
       this.notice = 'Sąrašas išsaugotas.';
       this.error = '';
+      this.detailsExpanded = false;
     } catch { this.saveError(); }
+  }
+
+  toggleDetails(): void {
+    if (!this.detailsExpanded && this.list) {
+      this.listName = this.list.name;
+      this.languageA = this.list.languageA;
+      this.languageB = this.list.languageB;
+    }
+    this.detailsExpanded = !this.detailsExpanded;
+    this.error = '';
   }
 
   addPair(): void {
@@ -119,6 +141,20 @@ export class AppComponent implements OnDestroy {
       this.wordA = '';
       this.wordB = '';
       this.error = '';
+    } catch { this.saveError(); }
+  }
+
+  addBulkPairs(): void {
+    if (!this.listId) return;
+    let entries;
+    try { entries = parseCommaSeparatedPairs(this.bulkWordsA, this.bulkWordsB); }
+    catch (error) { this.error = error instanceof Error ? error.message : 'Nepavyko perskaityti žodžių.'; return; }
+    try {
+      this.data = this.learningStore.addPairs(this.data, this.listId, entries);
+      this.bulkWordsA = '';
+      this.bulkWordsB = '';
+      this.error = '';
+      this.notice = `Pridėta porų: ${entries.length}.`;
     } catch { this.saveError(); }
   }
 
@@ -151,6 +187,8 @@ export class AppComponent implements OnDestroy {
     this.result = null;
     this.error = '';
     this.view = 'quiz';
+    this.changeDetector.detectChanges();
+    this.focusAnswer();
     this.clock = setInterval(() => this.tick(), 100);
   }
 
@@ -163,7 +201,12 @@ export class AppComponent implements OnDestroy {
     this.answerText = '';
     this.feedbackWord = question;
     this.feedbackKind = correct ? 'correct' : 'incorrect';
-    this.feedbackClock = setTimeout(() => { this.feedbackKind = null; this.feedbackClock = null; }, 550);
+    this.focusAnswer();
+    this.feedbackClock = setTimeout(() => {
+      this.feedbackKind = null;
+      this.feedbackClock = null;
+      this.changeDetector.detectChanges();
+    }, 550);
   }
 
   skip(): void {
@@ -171,6 +214,7 @@ export class AppComponent implements OnDestroy {
     if (this.session.remaining() === 0) { this.finishQuiz(); return; }
     this.session.skip();
     this.answerText = '';
+    this.focusAnswer();
   }
 
   leaveQuiz(destination: 'lists' | 'edit'): void {
@@ -192,6 +236,11 @@ export class AppComponent implements OnDestroy {
     if (!this.session) return;
     this.remainingMs = this.session.remaining();
     if (this.remainingMs === 0) this.finishQuiz();
+    this.changeDetector.detectChanges();
+  }
+
+  private focusAnswer(): void {
+    this.answerInput?.nativeElement.focus();
   }
 
   private finishQuiz(): void {

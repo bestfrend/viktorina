@@ -15,6 +15,7 @@ async function loadTypeScript(relative) {
 
 const { QuizSession, normalizeAnswer, choosePair } = await loadTypeScript('src/app/quiz-session.ts');
 const { LearningStore } = await loadTypeScript('src/app/learning-store.service.ts');
+const { parseCommaSeparatedPairs } = await loadTypeScript('src/app/pair-input.ts');
 
 assert.equal(normalizeAnswer('  ŽĄsis  '), 'zasis');
 assert.equal(normalizeAnswer('KATĖ'), 'kate');
@@ -32,18 +33,27 @@ assert.equal(session.streaks.get('p1'), 6);
 assert.deepEqual(session.counts, { correct: 1, incorrect: 1, skipped: 1 });
 assert.equal(list.pairs[0].streak, 7, 'An unfinished round must not mutate saved pairs');
 assert.equal(choosePair([{ id: 'a', streak: 0 }, { id: 'b', streak: 5 }], new Map([['a', 0], ['b', 5]]), 'a', () => 0.99).id, 'b');
+assert.deepEqual(parseCommaSeparatedPairs('katė, namas', 'cat, house'), [{ a: 'katė', b: 'cat' }, { a: 'namas', b: 'house' }]);
+assert.throws(() => parseCommaSeparatedPairs('katė, namas', 'cat'), /vienodas žodžių skaičius/);
+assert.throws(() => parseCommaSeparatedPairs('katė,', 'cat, house'), /tuščių žodžių/);
 
 let stored = null;
 let rejectWrites = false;
+let writeCount = 0;
 globalThis.localStorage = {
   getItem: () => stored,
-  setItem: (_key, value) => { if (rejectWrites) throw new Error('quota'); stored = value; }
+  setItem: (_key, value) => { if (rejectWrites) throw new Error('quota'); writeCount++; stored = value; }
 };
 const store = new LearningStore();
 let data = store.load();
 const created = store.createList(data, 's1', 'Gyvūnai', 'Lietuvių', 'Anglų');
 data = store.addPair(created.data, created.list.id, 'katė', 'cat');
 assert.equal(store.load().lists[0].pairs.length, 1);
+const beforeBatch = writeCount;
+data = store.addPairs(data, created.list.id, parseCommaSeparatedPairs('šuo, obuolys', 'dog, apple'));
+assert.equal(writeCount, beforeBatch + 1, 'A batch of pairs must be persisted in one write');
+assert.equal(store.load().lists[0].pairs.length, 3);
+assert.throws(() => store.createList(data, 's1', 'Kitas', 'Lietuvių', 'lietuvių'), /Languages must differ/);
 const pairId = data.lists[0].pairs[0].id;
 const done = store.completeRound(data, created.list.id, 's1', new Map([[pairId, 3]]), { correct: 3, incorrect: 0, skipped: 0 });
 assert.equal(done.data.lists[0].pairs[0].streak, 3);

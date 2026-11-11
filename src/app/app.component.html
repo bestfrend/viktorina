@@ -54,30 +54,46 @@
       <label for="new-list-name">Sąrašo pavadinimas</label><input pInputText id="new-list-name" name="listName" [(ngModel)]="listName" maxlength="80" placeholder="Pavyzdžiui, Gyvūnai">
       <label for="new-language-a">Pirmoji kalba</label><input pInputText id="new-language-a" name="languageA" [(ngModel)]="languageA" maxlength="40">
       <label for="new-language-b">Antroji kalba</label><input pInputText id="new-language-b" name="languageB" [(ngModel)]="languageB" maxlength="40">
-      <button pButton type="submit" class="primary-action" [disabled]="!listName.trim() || !languageA.trim() || !languageB.trim()">Sukurti sąrašą</button>
+      <button pButton type="submit" class="primary-action" [disabled]="!listName.trim() || !languageA.trim() || !languageB.trim() || languageA.trim().toLocaleLowerCase('lt') === languageB.trim().toLocaleLowerCase('lt')">Sukurti sąrašą</button>
     </form>
   </section>
 
   <section *ngIf="view === 'edit' && list as current" class="card" aria-labelledby="edit-heading">
     <button type="button" class="text-button" (click)="view = 'lists'">← Sąrašai</button>
     <p class="eyebrow">REDAGAVIMAS</p><h1 id="edit-heading">{{ current.name }}</h1>
-    <form (ngSubmit)="saveListDetails()" class="form-stack compact-form">
+    <button type="button" class="details-toggle" [attr.aria-expanded]="detailsExpanded" aria-controls="list-details" (click)="toggleDetails()">
+      <span class="details-summary"><span>Pirmoji kalba: <strong>{{ current.languageA }}</strong></span><span>Antroji kalba: <strong>{{ current.languageB }}</strong></span></span>
+      <span class="details-chevron" aria-hidden="true">{{ detailsExpanded ? '⌃' : '⌄' }}</span>
+      <span class="sr-only">{{ detailsExpanded ? 'Suskleisti sąrašo nustatymus' : 'Keisti pavadinimą ir kalbas' }}</span>
+    </button>
+    <form *ngIf="detailsExpanded" id="list-details" (ngSubmit)="saveListDetails()" class="form-stack compact-form details-form">
       <label for="edit-list-name">Pavadinimas</label><input pInputText id="edit-list-name" name="listName" [(ngModel)]="listName" maxlength="80">
       <div class="two-columns"><div><label for="edit-language-a">Pirmoji kalba</label><input pInputText id="edit-language-a" name="languageA" [(ngModel)]="languageA" maxlength="40"></div>
         <div><label for="edit-language-b">Antroji kalba</label><input pInputText id="edit-language-b" name="languageB" [(ngModel)]="languageB" maxlength="40"></div></div>
-      <button pButton type="submit" class="secondary-action">Išsaugoti pavadinimą ir kalbas</button>
+      <button pButton type="submit" class="secondary-action" [disabled]="!listName.trim() || !languageA.trim() || !languageB.trim() || languageA.trim().toLocaleLowerCase('lt') === languageB.trim().toLocaleLowerCase('lt')">Išsaugoti pavadinimą ir kalbas</button>
     </form>
     <div class="divider"></div>
     <div class="section-heading"><h2>Žodžių poros</h2><button type="button" class="text-button" (click)="swapDirection()">⇄ Sukeisti kryptį</button></div>
     <p class="direction">Klausimas: {{ current.direction === 'a-to-b' ? current.languageA : current.languageB }} → Atsakymas: {{ current.direction === 'a-to-b' ? current.languageB : current.languageA }}</p>
-    <form (ngSubmit)="addPair()" class="form-stack compact-form">
+    <div class="entry-mode" role="group" aria-label="Žodžių porų įvedimo būdas">
+      <button type="button" [class.active]="pairEntryMode === 'single'" [attr.aria-pressed]="pairEntryMode === 'single'" (click)="pairEntryMode = 'single'">Po vieną porą</button>
+      <button type="button" [class.active]="pairEntryMode === 'bulk'" [attr.aria-pressed]="pairEntryMode === 'bulk'" (click)="pairEntryMode = 'bulk'">Keli iš karto</button>
+    </div>
+    <form *ngIf="pairEntryMode === 'single'" (ngSubmit)="addPair()" class="form-stack compact-form">
       <label for="word-a">{{ current.languageA }}</label><input pInputText id="word-a" name="wordA" [(ngModel)]="wordA" maxlength="100" placeholder="Pirmas žodis">
       <label for="word-b">{{ current.languageB }}</label><input pInputText id="word-b" name="wordB" [(ngModel)]="wordB" maxlength="100" placeholder="Vertimas">
       <button pButton type="submit" class="primary-action" [disabled]="!wordA.trim() || !wordB.trim()">Pridėti porą</button>
     </form>
+    <form *ngIf="pairEntryMode === 'bulk'" (ngSubmit)="addBulkPairs()" class="form-stack compact-form">
+      <p class="bulk-hint">Įrašyk žodžius ta pačia tvarka abiem kalbomis, atskirdamas kableliais.</p>
+      <label for="bulk-words-a">Žodžiai: {{ current.languageA }}</label><textarea pTextarea id="bulk-words-a" name="bulkWordsA" [(ngModel)]="bulkWordsA" rows="3" maxlength="10100" placeholder="katė, namas, obuolys, saulė"></textarea>
+      <label for="bulk-words-b">Žodžiai: {{ current.languageB }}</label><textarea pTextarea id="bulk-words-b" name="bulkWordsB" [(ngModel)]="bulkWordsB" rows="3" maxlength="10100" placeholder="cat, house, apple, sun"></textarea>
+      <button pButton type="submit" class="primary-action" [disabled]="!bulkWordsA.trim() || !bulkWordsB.trim()">Pridėti poras</button>
+    </form>
     <div class="pair-list" *ngIf="current.pairs.length">
+      <div class="pair-list-heading"><h3>Pridėtos poros</h3><span>Porų: {{ current.pairs.length }}</span></div>
       <div *ngFor="let pair of current.pairs" class="pair-row">
-        <div class="pair-words"><strong>{{ pair.a }}</strong><span>{{ pair.b }}</span></div>
+        <div class="pair-content"><div class="pair-words"><span class="pair-word" [title]="current.direction === 'a-to-b' ? pair.a : pair.b">{{ current.direction === 'a-to-b' ? pair.a : pair.b }}</span><span class="pair-arrow" aria-hidden="true">→</span><span class="pair-word" [title]="current.direction === 'a-to-b' ? pair.b : pair.a">{{ current.direction === 'a-to-b' ? pair.b : pair.a }}</span></div><span class="pair-streak">Teisingai iš eilės: {{ pair.streak }}</span></div>
         <button type="button" class="icon-button" [attr.aria-label]="'Ištrinti porą ' + pair.a + ' – ' + pair.b" (click)="deletePair(pair.id)">×</button>
       </div>
     </div>
@@ -102,7 +118,7 @@
     <div class="question" [class.correct]="feedbackKind === 'correct'" [class.incorrect]="feedbackKind === 'incorrect'" aria-live="polite">{{ questionWord }}</div>
     <form (ngSubmit)="answer()" class="form-stack">
       <label for="quiz-answer">Tavo atsakymas</label>
-      <input pInputText id="quiz-answer" name="answerText" [(ngModel)]="answerText" [disabled]="!!feedbackKind || remainingMs === 0" maxlength="100" autocomplete="off" placeholder="Įrašyk vertimą">
+      <input #answerInput pInputText id="quiz-answer" name="answerText" [(ngModel)]="answerText" [disabled]="remainingMs === 0" maxlength="100" autocomplete="off" autocapitalize="off" placeholder="Įrašyk vertimą">
       <button pButton type="submit" class="primary-action" [disabled]="!answerText.trim() || !!feedbackKind || remainingMs === 0">Atsakyti</button>
     </form>
     <button pButton type="button" class="secondary-action" [disabled]="!!feedbackKind || remainingMs === 0" (click)="skip()">Praleisti</button>
