@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.angular/
+.agent-state/
+.agent-worktrees/
+.app-architect/
+project-input/
