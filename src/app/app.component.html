@@ -1,0 +1,39 @@
+<main class="page">
+  <header class="brand">
+    <span class="brand-mark" aria-hidden="true">Ž</span>
+    <span>Žodžių praktika</span>
+  </header>
+
+  <section class="card" aria-labelledby="heading">
+    <p class="eyebrow">LABAS!</p>
+    <h1 id="heading">Kas šiandien mokysis?</h1>
+    <p class="intro">Pasirink savo vardą arba įrašyk naują.</p>
+
+    <div *ngIf="error" class="error" role="alert">
+      <p>{{ error }}</p>
+      <button *ngIf="!storageAvailable" type="button" class="retry" (click)="reload()">Bandyti dar kartą</button>
+    </div>
+
+    <div *ngIf="storageAvailable && state.students.length" class="students">
+      <h2>Pasirink mokinį</h2>
+      <div class="student-list">
+        <button *ngFor="let student of state.students" type="button" class="student" [class.selected]="student.id === state.selectedStudentId" [attr.aria-pressed]="student.id === state.selectedStudentId" (click)="select(student.id)">
+          <span class="avatar" aria-hidden="true">{{ student.name.charAt(0).toLocaleUpperCase('lt') }}</span>
+          <span class="student-name">{{ student.name }}</span>
+          <span *ngIf="student.id === state.selectedStudentId" class="selected-label">Pasirinkta</span>
+        </button>
+      </div>
+    </div>
+
+    <form class="name-form" (ngSubmit)="add()">
+      <label for="student-name">Naujo mokinio vardas</label>
+      <input pInputText id="student-name" name="studentName" type="text" [(ngModel)]="name" [disabled]="!storageAvailable" maxlength="80" autocomplete="given-name" placeholder="Įrašyk vardą">
+      <button pButton type="submit" class="primary-action" [disabled]="!storageAvailable || !name.trim()">Išsaugoti vardą</button>
+    </form>
+
+    <p *ngIf="selectedName" class="current" aria-live="polite">Pasirinktas mokinys: <strong>{{ selectedName }}</strong></p>
+    <p class="notice">Vardai saugomi tik šiame įrenginyje. Išvalius naršyklės duomenis jie bus prarasti.</p>
+  </section>
+
+  <p class="coming-soon">Žodžių sąrašai ir viktorina bus prieinami vėliau.</p>
+</main>

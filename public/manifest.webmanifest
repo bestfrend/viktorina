@@ -1,0 +1,14 @@
+{
+  "name": "Žodžių praktika",
+  "short_name": "Žodžiai",
+  "description": "Tavo vieta žodžiams mokytis.",
+  "lang": "lt",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef1f5",
+  "theme_color": "#eef1f5",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
