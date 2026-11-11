@@ -1,39 +1,123 @@
 <main class="page">
   <header class="brand">
     <span class="brand-mark" aria-hidden="true">Ž</span>
-    <span>Žodžių praktika</span>
+    <div><span class="brand-title">Žodžių praktika</span><span class="brand-subtitle">Mokykis savo tempu</span></div>
   </header>
 
-  <section class="card" aria-labelledby="heading">
+  <div *ngIf="error" class="error" role="alert">
+    {{ error }}
+    <button *ngIf="!storageAvailable" pButton type="button" class="small-button" (click)="reload()">Bandyti dar kartą</button>
+  </div>
+  <p *ngIf="notice && !error" class="notice" aria-live="polite">{{ notice }}</p>
+
+  <section *ngIf="view === 'students'" class="card" aria-labelledby="students-heading">
     <p class="eyebrow">LABAS!</p>
-    <h1 id="heading">Kas šiandien mokysis?</h1>
+    <h1 id="students-heading">Kas šiandien mokysis?</h1>
     <p class="intro">Pasirink savo vardą arba įrašyk naują.</p>
-
-    <div *ngIf="error" class="error" role="alert">
-      <p>{{ error }}</p>
-      <button *ngIf="!storageAvailable" type="button" class="retry" (click)="reload()">Bandyti dar kartą</button>
+    <div *ngIf="storageAvailable && students.students.length" class="stack">
+      <h2 class="section-title">Mokiniai</h2>
+      <button *ngFor="let item of students.students" type="button" class="student" [class.selected]="item.id === students.selectedStudentId" (click)="selectStudent(item.id)">
+        <span class="avatar" aria-hidden="true">{{ item.name.charAt(0).toLocaleUpperCase('lt') }}</span>
+        <span class="student-name">{{ item.name }}</span><span aria-hidden="true">→</span>
+      </button>
     </div>
-
-    <div *ngIf="storageAvailable && state.students.length" class="students">
-      <h2>Pasirink mokinį</h2>
-      <div class="student-list">
-        <button *ngFor="let student of state.students" type="button" class="student" [class.selected]="student.id === state.selectedStudentId" [attr.aria-pressed]="student.id === state.selectedStudentId" (click)="select(student.id)">
-          <span class="avatar" aria-hidden="true">{{ student.name.charAt(0).toLocaleUpperCase('lt') }}</span>
-          <span class="student-name">{{ student.name }}</span>
-          <span *ngIf="student.id === state.selectedStudentId" class="selected-label">Pasirinkta</span>
-        </button>
-      </div>
-    </div>
-
-    <form class="name-form" (ngSubmit)="add()">
+    <form (ngSubmit)="addStudent()" class="form-stack">
       <label for="student-name">Naujo mokinio vardas</label>
-      <input pInputText id="student-name" name="studentName" type="text" [(ngModel)]="name" [disabled]="!storageAvailable" maxlength="80" autocomplete="given-name" placeholder="Įrašyk vardą">
-      <button pButton type="submit" class="primary-action" [disabled]="!storageAvailable || !name.trim()">Išsaugoti vardą</button>
+      <input pInputText id="student-name" name="studentName" [(ngModel)]="studentName" [disabled]="!storageAvailable" maxlength="80" autocomplete="given-name" placeholder="Įrašyk vardą">
+      <button pButton type="submit" class="primary-action" [disabled]="!storageAvailable || !studentName.trim()">Pradėti mokytis</button>
     </form>
-
-    <p *ngIf="selectedName" class="current" aria-live="polite">Pasirinktas mokinys: <strong>{{ selectedName }}</strong></p>
-    <p class="notice">Vardai saugomi tik šiame įrenginyje. Išvalius naršyklės duomenis jie bus prarasti.</p>
+    <p class="footnote">Duomenys saugomi tik šiame įrenginyje. Išvalius naršyklės duomenis jie bus prarasti.</p>
   </section>
 
-  <p class="coming-soon">Žodžių sąrašai ir viktorina bus prieinami vėliau.</p>
+  <section *ngIf="view === 'lists'" class="card" aria-labelledby="lists-heading">
+    <button type="button" class="text-button" (click)="view = 'students'">← Keisti mokinį</button>
+    <p class="eyebrow">{{ student?.name }}</p>
+    <h1 id="lists-heading">Mano žodžių sąrašai</h1>
+    <p class="intro">Pasirink sąrašą viktorinai arba sukurk naują.</p>
+    <div class="stack" *ngIf="lists.length; else emptyLists">
+      <button *ngFor="let item of lists" type="button" class="list-card" (click)="openList(item.id)">
+        <strong>{{ item.name }}</strong><span>{{ item.languageA }} ↔ {{ item.languageB }} · {{ item.pairs.length }} poros</span>
+      </button>
+    </div>
+    <ng-template #emptyLists><p class="empty">Dar neturi sąrašų. Sukurk pirmąjį ir įrašyk kelias žodžių poras.</p></ng-template>
+    <button pButton type="button" class="primary-action" (click)="showNewList()">+ Naujas sąrašas</button>
+    <div *ngIf="previousResults.length" class="history">
+      <h2 class="section-title">Paskutiniai rezultatai</h2>
+      <p *ngFor="let previous of previousResults">{{ previous.finishedAt | date:'yyyy-MM-dd' }} · {{ previous.correct }} teisingai · {{ previous.incorrect }} neteisingai · {{ previous.skipped }} praleista</p>
+    </div>
+  </section>
+
+  <section *ngIf="view === 'new-list'" class="card" aria-labelledby="new-list-heading">
+    <button type="button" class="text-button" (click)="view = 'lists'">← Sąrašai</button>
+    <p class="eyebrow">NAUJAS SĄRAŠAS</p><h1 id="new-list-heading">Ką mokysies?</h1>
+    <form (ngSubmit)="createList()" class="form-stack">
+      <label for="new-list-name">Sąrašo pavadinimas</label><input pInputText id="new-list-name" name="listName" [(ngModel)]="listName" maxlength="80" placeholder="Pavyzdžiui, Gyvūnai">
+      <label for="new-language-a">Pirmoji kalba</label><input pInputText id="new-language-a" name="languageA" [(ngModel)]="languageA" maxlength="40">
+      <label for="new-language-b">Antroji kalba</label><input pInputText id="new-language-b" name="languageB" [(ngModel)]="languageB" maxlength="40">
+      <button pButton type="submit" class="primary-action" [disabled]="!listName.trim() || !languageA.trim() || !languageB.trim()">Sukurti sąrašą</button>
+    </form>
+  </section>
+
+  <section *ngIf="view === 'edit' && list as current" class="card" aria-labelledby="edit-heading">
+    <button type="button" class="text-button" (click)="view = 'lists'">← Sąrašai</button>
+    <p class="eyebrow">REDAGAVIMAS</p><h1 id="edit-heading">{{ current.name }}</h1>
+    <form (ngSubmit)="saveListDetails()" class="form-stack compact-form">
+      <label for="edit-list-name">Pavadinimas</label><input pInputText id="edit-list-name" name="listName" [(ngModel)]="listName" maxlength="80">
+      <div class="two-columns"><div><label for="edit-language-a">Pirmoji kalba</label><input pInputText id="edit-language-a" name="languageA" [(ngModel)]="languageA" maxlength="40"></div>
+        <div><label for="edit-language-b">Antroji kalba</label><input pInputText id="edit-language-b" name="languageB" [(ngModel)]="languageB" maxlength="40"></div></div>
+      <button pButton type="submit" class="secondary-action">Išsaugoti pavadinimą ir kalbas</button>
+    </form>
+    <div class="divider"></div>
+    <div class="section-heading"><h2>Žodžių poros</h2><button type="button" class="text-button" (click)="swapDirection()">⇄ Sukeisti kryptį</button></div>
+    <p class="direction">Klausimas: {{ current.direction === 'a-to-b' ? current.languageA : current.languageB }} → Atsakymas: {{ current.direction === 'a-to-b' ? current.languageB : current.languageA }}</p>
+    <form (ngSubmit)="addPair()" class="form-stack compact-form">
+      <label for="word-a">{{ current.languageA }}</label><input pInputText id="word-a" name="wordA" [(ngModel)]="wordA" maxlength="100" placeholder="Pirmas žodis">
+      <label for="word-b">{{ current.languageB }}</label><input pInputText id="word-b" name="wordB" [(ngModel)]="wordB" maxlength="100" placeholder="Vertimas">
+      <button pButton type="submit" class="primary-action" [disabled]="!wordA.trim() || !wordB.trim()">Pridėti porą</button>
+    </form>
+    <div class="pair-list" *ngIf="current.pairs.length">
+      <div *ngFor="let pair of current.pairs" class="pair-row">
+        <div class="pair-words"><strong>{{ pair.a }}</strong><span>{{ pair.b }}</span></div>
+        <button type="button" class="icon-button" [attr.aria-label]="'Ištrinti porą ' + pair.a + ' – ' + pair.b" (click)="deletePair(pair.id)">×</button>
+      </div>
+    </div>
+    <button pButton type="button" class="secondary-action" [disabled]="!current.pairs.length" (click)="view = 'ready'">Į viktorinos pradžią</button>
+    <button type="button" class="danger-link" (click)="deleteList()">Ištrinti sąrašą</button>
+  </section>
+
+  <section *ngIf="view === 'ready' && list as current" class="card" aria-labelledby="ready-heading">
+    <button type="button" class="text-button" (click)="view = 'lists'">← Sąrašai</button>
+    <p class="eyebrow">PASIRUOŠK</p><h1 id="ready-heading">{{ current.name }}</h1>
+    <p class="intro">{{ current.languageA }} ↔ {{ current.languageB }} · {{ current.pairs.length }} poros</p>
+    <div class="ready-panel"><span class="minute">1:00</span><p>Turėsi vieną minutę. Laikas prasidės, kai paspausi „Pradėti“.</p></div>
+    <p *ngIf="!current.pairs.length" class="empty">Prieš viktoriną pridėk bent vieną žodžių porą.</p>
+    <button pButton type="button" class="primary-action" [disabled]="!current.pairs.length" (click)="startQuiz()">Pradėti</button>
+    <button pButton type="button" class="secondary-action" (click)="editList()">Redaguoti žodžius</button>
+  </section>
+
+  <section *ngIf="view === 'quiz' && session as round" class="card quiz-card" aria-labelledby="quiz-heading">
+    <div class="quiz-top"><span class="eyebrow">{{ round.list.name }}</span><span class="timer" [class.warning]="remainingSeconds <= 10" [class.urgent]="remainingSeconds <= 3" aria-live="off">{{ remainingSeconds }} s</span></div>
+    <h1 id="quiz-heading">Išversk žodį</h1>
+    <p class="direction">{{ round.questionLanguage() }} → {{ round.answerLanguage() }}</p>
+    <div class="question" [class.correct]="feedbackKind === 'correct'" [class.incorrect]="feedbackKind === 'incorrect'" aria-live="polite">{{ questionWord }}</div>
+    <form (ngSubmit)="answer()" class="form-stack">
+      <label for="quiz-answer">Tavo atsakymas</label>
+      <input pInputText id="quiz-answer" name="answerText" [(ngModel)]="answerText" [disabled]="!!feedbackKind || remainingMs === 0" maxlength="100" autocomplete="off" placeholder="Įrašyk vertimą">
+      <button pButton type="submit" class="primary-action" [disabled]="!answerText.trim() || !!feedbackKind || remainingMs === 0">Atsakyti</button>
+    </form>
+    <button pButton type="button" class="secondary-action" [disabled]="!!feedbackKind || remainingMs === 0" (click)="skip()">Praleisti</button>
+    <p class="quiz-counts">{{ round.counts.correct }} teisingai · {{ round.counts.incorrect }} neteisingai · {{ round.counts.skipped }} praleista</p>
+    <button *ngIf="remainingMs === 0 && error" pButton type="button" class="primary-action" (click)="retrySave()">Bandyti išsaugoti rezultatą dar kartą</button>
+    <div class="quiz-exit"><button type="button" class="text-button" (click)="leaveQuiz('edit')">Redaguoti žodžius</button><button type="button" class="text-button" (click)="leaveQuiz('lists')">Grįžti į sąrašus</button></div>
+    <p class="footnote">Išėjus prieš laiko pabaigą šio bandymo rezultatai nebus išsaugoti.</p>
+  </section>
+
+  <section *ngIf="view === 'results' && result as finished" class="card" aria-labelledby="results-heading">
+    <p class="eyebrow">MINUTĖ BAIGĖSI</p><h1 id="results-heading">Puikus darbas!</h1>
+    <p class="intro">Šio bandymo rezultatai išsaugoti šiame įrenginyje.</p>
+    <div class="result-grid"><div><strong>{{ finished.correct }}</strong><span>Teisingai</span></div><div><strong>{{ finished.incorrect }}</strong><span>Neteisingai</span></div><div><strong>{{ finished.skipped }}</strong><span>Praleista</span></div></div>
+    <button pButton type="button" class="primary-action" (click)="startQuiz()">Bandyti dar kartą</button>
+    <button pButton type="button" class="secondary-action" (click)="editList()">Redaguoti žodžius</button>
+    <button type="button" class="text-button centered" (click)="view = 'lists'">Grįžti į sąrašus</button>
+  </section>
 </main>

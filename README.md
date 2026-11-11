@@ -1,11 +1,33 @@
 # Žodžių praktika
 
-Mobilus Angular standalone ir PrimeNG programos pagrindas. Mokinys gali įrašyti vardą arba pasirinkti anksčiau įrašytą vardą. Tas pats vardas, nepaisant didžiųjų ir mažųjų raidžių, parenka esamą mokinį. Kiekvienam mokiniui sukuriamas stabilus ID.
+Telefonui pritaikyta Angular ir PrimeNG žodžių mokymosi PWA. Viename įrenginyje galima sukurti kelis mokinius, kiekvienam atskirus žodžių sąrašus, redaguoti poras ir žaisti vienos minutės viktoriną.
 
-Vardai ir pasirinkimas saugomi versijuotoje naršyklės vietinėje saugykloje, tik šiame įrenginyje ir naršyklėje. Išvalius naršyklės duomenis jie prarandami. Jei saugyklos perskaityti ar į ją įrašyti nepavyksta, programa parodo klaidą. Duomenys nesiunčiami į serverį. Žodžių sąrašai ir viktorina bus įgyvendinti vėliau.
+## Paleidimas
 
-## Paleidimas ir patikra
+Reikia Node.js 20.19+, 22.12+ arba 24+ versijos, suderinamos su Angular 21.
 
-Atskirai po kodo peržiūros įdiekite priklausomybes su `npm install`, paleiskite kūrimo serverį su `npm start` arba sukurkite produkcinę versiją su `npm run build`. Produkcinė išvestis yra `dist/zodziu-praktika/browser`. Naudokite Angular 19 palaikomą Node.js versiją.
+```powershell
+npm install
+npm start
+```
 
-PWA service worker registruojamas tik produkcinėje versijoje. Veikimui be ryšio patikrinti produkcinę išvestį reikia pateikti per HTTPS arba localhost, pirmą kartą atverti prisijungus prie tinklo ir palaukti service worker aktyvavimo, tuomet atjungti tinklą ir perkrauti puslapį. Manifestas naudoja tekstinę SVG piktogramą; įdiegimo palaikymas skirtingose naršyklėse gali skirtis. Konfigūracija numato programos pateikimą svetainės šaknyje.
+Atverkite `http://localhost:4200`. Produkcinis paketas ir tiksliniai testai:
+
+```powershell
+npm test
+npm run build
+```
+
+Produkciniai failai yra `dist/zodziu-praktika/browser`. Pateikite juos per HTTPS arba localhost. Po pirmo sėkmingo įkėlimo Angular service worker saugo programos failus; naršyklėje galima įdiegti PWA ir atverti ją be tinklo. `public/manifest.webmanifest` turi 192 ir 512 px PNG piktogramas; jas galima atkurti paleidus `scripts/generate-icons.ps1`.
+
+## Naudojimas ir duomenys
+
+Pasirinkite mokinį, sukurkite sąrašą, įrašykite jo kalbas bei žodžių poras. Pasirinkus sąrašą rodomas viktorinos pradžios ekranas. Laikas skaičiuojamas tik nuo „Pradėti“ paspaudimo. „Atsakyti“ vertina įrašytą vertimą; „Praleisti“ įskaičiuoja neatsakytą žodį. Išėjus prieš 60 sekundžių pabaigą, raundo rezultatai ir žodžių sekos atmetami. Pasibaigus laikui jie išsaugomi vienu vietinės saugyklos įrašu.
+
+Duomenys saugomi tik naršyklės `localStorage`, atskirai pagal mokinio ID. Išvalius naršyklės duomenis jie prarandami. Sinchronizavimo, paskyrų ir atsarginių kopijų šioje versijoje nėra. Saugyklos klaida rodoma vartotojui.
+
+Kartojimo svoriai sekoms 0, 1, 2, 3, 4 ir 5+ yra 12, 8, 5, 3, 2 ir 1. Ką tik parodytas žodis gauna 0,35 daugiklį. Atsakymai lyginami neatsižvelgiant į didžiąsias raides ir diakritiką. Šios taisyklės yra bandomosios ir aprašytos `.app-architect/requirements.md`.
+
+## Patikra
+
+`npm test` tikrina laikmatį, atsakymų vertinimą, sekas, svertinį parinkimą ir rezultato įrašymo klaidą. `npm run build` sugeneruoja PWA ir `ngsw.json`. Offline elgseną galima rankiniu būdu patikrinti: atverkite produkcinę versiją per localhost, palaukite service worker įdiegimo, DevTools įjunkite Offline, perkraukite puslapį ir patikrinkite išsaugotą mokinį bei sąrašus.

@@ -1,0 +1,55 @@
+import assert from 'node:assert/strict';
+import path from 'node:path';
+import { build } from 'esbuild';
+
+async function loadTypeScript(relative) {
+  const result = await build({
+    entryPoints: [path.resolve(relative)], bundle: true, write: false, format: 'esm', platform: 'node',
+    plugins: [{ name: 'angular-stub', setup(plugin) {
+      plugin.onResolve({ filter: /^@angular\/core$/ }, () => ({ path: 'angular-core', namespace: 'test' }));
+      plugin.onLoad({ filter: /.*/, namespace: 'test' }, () => ({ contents: 'export const Injectable = () => target => target;', loader: 'js' }));
+    } }]
+  });
+  return import(`data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString('base64')}`);
+}
+
+const { QuizSession, normalizeAnswer, choosePair } = await loadTypeScript('src/app/quiz-session.ts');
+const { LearningStore } = await loadTypeScript('src/app/learning-store.service.ts');
+
+assert.equal(normalizeAnswer('  ŽĄsis  '), 'zasis');
+assert.equal(normalizeAnswer('KATĖ'), 'kate');
+const list = { id: 'l1', studentId: 's1', name: 'Testas', languageA: 'Lietuvių', languageB: 'Anglų', direction: 'a-to-b', pairs: [{ id: 'p1', a: 'katė', b: 'cat', streak: 7 }] };
+const session = new QuizSession(list, 1000, () => 0);
+assert.equal(session.question(), 'katė');
+assert.equal(session.remaining(61000), 0);
+assert.equal(session.answer('cat', 61000), null);
+assert.equal(session.answer('wrong', 2000), false);
+assert.equal(session.streaks.get('p1'), 6);
+assert.equal(session.answer(' CAT ', 3000), true);
+assert.equal(session.streaks.get('p1'), 7);
+assert.equal(session.skip(4000), true);
+assert.equal(session.streaks.get('p1'), 6);
+assert.deepEqual(session.counts, { correct: 1, incorrect: 1, skipped: 1 });
+assert.equal(list.pairs[0].streak, 7, 'An unfinished round must not mutate saved pairs');
+assert.equal(choosePair([{ id: 'a', streak: 0 }, { id: 'b', streak: 5 }], new Map([['a', 0], ['b', 5]]), 'a', () => 0.99).id, 'b');
+
+let stored = null;
+let rejectWrites = false;
+globalThis.localStorage = {
+  getItem: () => stored,
+  setItem: (_key, value) => { if (rejectWrites) throw new Error('quota'); stored = value; }
+};
+const store = new LearningStore();
+let data = store.load();
+const created = store.createList(data, 's1', 'Gyvūnai', 'Lietuvių', 'Anglų');
+data = store.addPair(created.data, created.list.id, 'katė', 'cat');
+assert.equal(store.load().lists[0].pairs.length, 1);
+const pairId = data.lists[0].pairs[0].id;
+const done = store.completeRound(data, created.list.id, 's1', new Map([[pairId, 3]]), { correct: 3, incorrect: 0, skipped: 0 });
+assert.equal(done.data.lists[0].pairs[0].streak, 3);
+assert.equal(store.load().results[0].correct, 3);
+assert.equal(store.load().lists.filter(item => item.studentId === 's2').length, 0);
+rejectWrites = true;
+assert.throws(() => store.completeRound(done.data, created.list.id, 's1', new Map([[pairId, 4]]), { correct: 1, incorrect: 0, skipped: 0 }), /quota/);
+assert.equal(store.load().results.length, 1, 'Failed storage write must not claim a completed round');
+console.log('Quiz timing, scoring, streaks, weighted choice and atomic local persistence passed');

@@ -3,7 +3,7 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideServiceWorker } from '@angular/service-worker';
 import { providePrimeNG } from 'primeng/config';
-import Aura from '@primeng/themes/aura';
+import Aura from '@primeuix/themes/aura';
 import { AppComponent } from './app/app.component';
 
 bootstrapApplication(AppComponent, {
