@@ -4,10 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
-import { LearningData, QuizResult, WordList, emptyLearningData } from './learning-data';
+import { LearningData, QuizMinutes, QuizResult, WordList, emptyLearningData } from './learning-data';
 import { LearningStore } from './learning-store.service';
 import { parseCommaSeparatedPairs } from './pair-input';
-import { QuizMinutes, QuizSession } from './quiz-session';
+import { QuizSession } from './quiz-session';
 import { StudentState } from './student';
 import { StudentStore } from './student-store.service';
 
@@ -197,6 +197,13 @@ export class AppComponent implements OnDestroy {
     }, 550);
   }
 
+  onAnswerEnter(event: Event): void {
+    if ((event as KeyboardEvent).isComposing) return;
+    event.preventDefault();
+    if (this.answerText.trim()) this.answer();
+    else this.skip();
+  }
+
   skip(): void {
     if (!this.session || this.feedbackKind) return;
     if (this.session.remaining() === 0) { this.finishQuiz(); return; }
@@ -237,7 +244,7 @@ export class AppComponent implements OnDestroy {
     this.stopClock();
     this.remainingMs = 0;
     try {
-      const completed = this.learningStore.completeRound(this.data, session.list.id, this.student.id, session.streaks, session.counts);
+      const completed = this.learningStore.completeRound(this.data, session.list.id, this.student.id, session.streaks, session.counts, session.durationMinutes);
       this.data = completed.data;
       this.result = completed.result;
       this.session = null;

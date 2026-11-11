@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Direction, LearningData, QuizResult, WordList, WordPair, emptyLearningData, makeId } from './learning-data';
+import { Direction, LearningData, QuizMinutes, QuizResult, WordList, WordPair, emptyLearningData, makeId } from './learning-data';
 import { PairInput } from './pair-input';
 
 const STORAGE_KEY = 'zodziu-praktika.learning.v1';
@@ -70,10 +70,10 @@ export class LearningStore {
     return this.replaceList(data, id, list => ({ ...list, direction }));
   }
 
-  completeRound(data: LearningData, listId: string, studentId: string, streaks: ReadonlyMap<string, number>, counts: Pick<QuizResult, 'correct' | 'incorrect' | 'skipped'>): { data: LearningData; result: QuizResult } {
+  completeRound(data: LearningData, listId: string, studentId: string, streaks: ReadonlyMap<string, number>, counts: Pick<QuizResult, 'correct' | 'incorrect' | 'skipped'>, durationMinutes: QuizMinutes): { data: LearningData; result: QuizResult } {
     const list = data.lists.find(item => item.id === listId && item.studentId === studentId);
     if (!list) throw new Error('Unknown list');
-    const result: QuizResult = { id: makeId(), listId, studentId, finishedAt: new Date().toISOString(), ...counts };
+    const result: QuizResult = { id: makeId(), listId, studentId, finishedAt: new Date().toISOString(), durationMinutes, ...counts };
     const lists = data.lists.map(item => item.id === listId ? {
       ...item, pairs: item.pairs.map(pair => ({ ...pair, streak: streaks.get(pair.id) ?? pair.streak }))
     } : item);
@@ -108,6 +108,7 @@ export class LearningStore {
       if (!entry || typeof entry !== 'object') return false;
       const result = entry as Record<string, unknown>;
       return [result['id'], result['studentId'], result['listId'], result['finishedAt']].every(nonempty) &&
+        (result['durationMinutes'] === undefined || [1, 3, 5].includes(result['durationMinutes'] as number)) &&
         [result['correct'], result['incorrect'], result['skipped']].every(count);
     });
   }

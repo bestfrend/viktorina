@@ -1,4 +1,5 @@
 export type Direction = 'a-to-b' | 'b-to-a';
+export type QuizMinutes = 1 | 3 | 5;
 
 export interface WordPair {
   id: string;
@@ -22,6 +23,7 @@ export interface QuizResult {
   studentId: string;
   listId: string;
   finishedAt: string;
+  durationMinutes?: QuizMinutes;
   correct: number;
   incorrect: number;
   skipped: number;

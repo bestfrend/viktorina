@@ -1,7 +1,6 @@
-import { Direction, WordList, WordPair } from './learning-data';
+import { Direction, QuizMinutes, WordList, WordPair } from './learning-data';
 
 export interface QuizCounts { correct: number; incorrect: number; skipped: number }
-export type QuizMinutes = 1 | 3 | 5;
 const weights = [12, 8, 5, 3, 2, 1];
 
 export function normalizeAnswer(value: string): string {
