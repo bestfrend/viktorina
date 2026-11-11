@@ -7,11 +7,11 @@ Telefonui pritaikyta Angular ir PrimeNG žodžių mokymosi PWA. Viename įrengin
 Reikia Node.js 20.19+, 22.12+ arba 24+ versijos, suderinamos su Angular 21.
 
 ```powershell
-npm install
-npm start
+npm.cmd install
+npm.cmd run dev
 ```
 
-Atverkite `http://localhost:4200`. Produkcinis paketas ir tiksliniai testai:
+Atverkite `http://127.0.0.1:4200/`. Kūrimo serveris automatiškai perkrauna puslapį pakeitus kodą. Produkcinis paketas ir tiksliniai testai:
 
 ```powershell
 npm test
