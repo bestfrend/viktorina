@@ -75,17 +75,8 @@
     <div class="divider"></div>
     <div class="section-heading"><h2>Žodžių poros</h2><button type="button" class="text-button" (click)="swapDirection()">⇄ Sukeisti kryptį</button></div>
     <p class="direction">Klausimas: {{ current.direction === 'a-to-b' ? current.languageA : current.languageB }} → Atsakymas: {{ current.direction === 'a-to-b' ? current.languageB : current.languageA }}</p>
-    <div class="entry-mode" role="group" aria-label="Žodžių porų įvedimo būdas">
-      <button type="button" [class.active]="pairEntryMode === 'single'" [attr.aria-pressed]="pairEntryMode === 'single'" (click)="pairEntryMode = 'single'">Po vieną porą</button>
-      <button type="button" [class.active]="pairEntryMode === 'bulk'" [attr.aria-pressed]="pairEntryMode === 'bulk'" (click)="pairEntryMode = 'bulk'">Keli iš karto</button>
-    </div>
-    <form *ngIf="pairEntryMode === 'single'" (ngSubmit)="addPair()" class="form-stack compact-form">
-      <label for="word-a">{{ current.languageA }}</label><input pInputText id="word-a" name="wordA" [(ngModel)]="wordA" maxlength="100" placeholder="Pirmas žodis">
-      <label for="word-b">{{ current.languageB }}</label><input pInputText id="word-b" name="wordB" [(ngModel)]="wordB" maxlength="100" placeholder="Vertimas">
-      <button pButton type="submit" class="primary-action" [disabled]="!wordA.trim() || !wordB.trim()">Pridėti porą</button>
-    </form>
-    <form *ngIf="pairEntryMode === 'bulk'" (ngSubmit)="addBulkPairs()" class="form-stack compact-form">
-      <p class="bulk-hint">Įrašyk žodžius ta pačia tvarka abiem kalbomis, atskirdamas kableliais.</p>
+    <form (ngSubmit)="addBulkPairs()" class="form-stack compact-form">
+      <p class="bulk-hint">Įrašyk vieną porą arba kelis žodžius ta pačia tvarka abiem kalbomis, atskirdamas kableliais.</p>
       <label for="bulk-words-a">Žodžiai: {{ current.languageA }}</label><textarea pTextarea id="bulk-words-a" name="bulkWordsA" [(ngModel)]="bulkWordsA" rows="3" maxlength="10100" placeholder="katė, namas, obuolys, saulė"></textarea>
       <label for="bulk-words-b">Žodžiai: {{ current.languageB }}</label><textarea pTextarea id="bulk-words-b" name="bulkWordsB" [(ngModel)]="bulkWordsB" rows="3" maxlength="10100" placeholder="cat, house, apple, sun"></textarea>
       <button pButton type="submit" class="primary-action" [disabled]="!bulkWordsA.trim() || !bulkWordsB.trim()">Pridėti poras</button>
@@ -93,7 +84,8 @@
     <div class="pair-list" *ngIf="current.pairs.length">
       <div class="pair-list-heading"><h3>Pridėtos poros</h3><span>Porų: {{ current.pairs.length }}</span></div>
       <div *ngFor="let pair of current.pairs" class="pair-row">
-        <div class="pair-content"><div class="pair-words"><span class="pair-word" [title]="current.direction === 'a-to-b' ? pair.a : pair.b">{{ current.direction === 'a-to-b' ? pair.a : pair.b }}</span><span class="pair-arrow" aria-hidden="true">→</span><span class="pair-word" [title]="current.direction === 'a-to-b' ? pair.b : pair.a">{{ current.direction === 'a-to-b' ? pair.b : pair.a }}</span></div><span class="pair-streak">Teisingai iš eilės: {{ pair.streak }}</span></div>
+        <div class="pair-content"><div class="pair-words"><span class="pair-word" [title]="current.direction === 'a-to-b' ? pair.a : pair.b">{{ current.direction === 'a-to-b' ? pair.a : pair.b }}</span><span class="pair-arrow" aria-hidden="true">→</span><span class="pair-word" [title]="current.direction === 'a-to-b' ? pair.b : pair.a">{{ current.direction === 'a-to-b' ? pair.b : pair.a }}</span></div></div>
+        <span class="pair-index" [attr.aria-label]="'Kartojimo indeksas ' + (pair.streak + 1)">{{ pair.streak + 1 }}</span>
         <button type="button" class="icon-button" [attr.aria-label]="'Ištrinti porą ' + pair.a + ' – ' + pair.b" (click)="deletePair(pair.id)">×</button>
       </div>
     </div>
@@ -105,14 +97,18 @@
     <button type="button" class="text-button" (click)="view = 'lists'">← Sąrašai</button>
     <p class="eyebrow">PASIRUOŠK</p><h1 id="ready-heading">{{ current.name }}</h1>
     <p class="intro">{{ current.languageA }} ↔ {{ current.languageB }} · {{ current.pairs.length }} poros</p>
-    <div class="ready-panel"><span class="minute">1:00</span><p>Turėsi vieną minutę. Laikas prasidės, kai paspausi „Pradėti“.</p></div>
+    <div class="ready-panel"><span class="minute">{{ selectedMinutes }}:00</span><p>Pasirink trukmę. Laikas prasidės, kai paspausi „Pradėti“.</p>
+      <div class="duration-options" role="group" aria-label="Viktorinos trukmė">
+        <button *ngFor="let minutes of durationOptions" type="button" [class.active]="selectedMinutes === minutes" [attr.aria-pressed]="selectedMinutes === minutes" (click)="selectedMinutes = minutes">{{ minutes }} min.</button>
+      </div>
+    </div>
     <p *ngIf="!current.pairs.length" class="empty">Prieš viktoriną pridėk bent vieną žodžių porą.</p>
     <button pButton type="button" class="primary-action" [disabled]="!current.pairs.length" (click)="startQuiz()">Pradėti</button>
     <button pButton type="button" class="secondary-action" (click)="editList()">Redaguoti žodžius</button>
   </section>
 
   <section *ngIf="view === 'quiz' && session as round" class="card quiz-card" aria-labelledby="quiz-heading">
-    <div class="quiz-top"><span class="eyebrow">{{ round.list.name }}</span><span class="timer" [class.warning]="remainingSeconds <= 10" [class.urgent]="remainingSeconds <= 3" aria-live="off">{{ remainingSeconds }} s</span></div>
+    <div class="quiz-top"><span class="eyebrow">{{ round.list.name }}</span><span class="timer" [class.warning]="remainingSeconds <= 10" [class.urgent]="remainingSeconds <= 3" aria-label="Likęs laikas" aria-live="off">{{ remainingClock }}</span></div>
     <h1 id="quiz-heading">Išversk žodį</h1>
     <p class="direction">{{ round.questionLanguage() }} → {{ round.answerLanguage() }}</p>
     <div class="question" [class.correct]="feedbackKind === 'correct'" [class.incorrect]="feedbackKind === 'incorrect'" aria-live="polite">{{ questionWord }}</div>
@@ -129,7 +125,7 @@
   </section>
 
   <section *ngIf="view === 'results' && result as finished" class="card" aria-labelledby="results-heading">
-    <p class="eyebrow">MINUTĖ BAIGĖSI</p><h1 id="results-heading">Puikus darbas!</h1>
+    <p class="eyebrow">LAIKAS BAIGĖSI</p><h1 id="results-heading">Puikus darbas!</h1>
     <p class="intro">Šio bandymo rezultatai išsaugoti šiame įrenginyje.</p>
     <div class="result-grid"><div><strong>{{ finished.correct }}</strong><span>Teisingai</span></div><div><strong>{{ finished.incorrect }}</strong><span>Neteisingai</span></div><div><strong>{{ finished.skipped }}</strong><span>Praleista</span></div></div>
     <button pButton type="button" class="primary-action" (click)="startQuiz()">Bandyti dar kartą</button>

@@ -1,6 +1,6 @@
 # Žodžių praktika
 
-Telefonui pritaikyta Angular ir PrimeNG žodžių mokymosi PWA. Viename įrenginyje galima sukurti kelis mokinius, kiekvienam atskirus žodžių sąrašus, redaguoti poras ir žaisti vienos minutės viktoriną.
+Telefonui pritaikyta Angular ir PrimeNG žodžių mokymosi PWA. Viename įrenginyje galima sukurti kelis mokinius, kiekvienam atskirus žodžių sąrašus, redaguoti poras ir žaisti 1, 3 arba 5 minučių viktoriną.
 
 ## Paleidimas
 
@@ -22,7 +22,7 @@ Produkciniai failai yra `dist/zodziu-praktika/browser`. Pateikite juos per HTTPS
 
 ## Naudojimas ir duomenys
 
-Pasirinkite mokinį, sukurkite sąrašą, įrašykite jo kalbas bei žodžių poras. Redagavimo ekrane kalbų nustatymai suskleisti; juos galima išskleisti ir išsaugoti. Poras galima pridėti po vieną arba suvesti abiejų kalbų žodžius ta pačia tvarka, atskiriant kableliais. Pridėtos poros iškart matomos apačioje. Pasirinkus sąrašą rodomas viktorinos pradžios ekranas. Laikas skaičiuojamas tik nuo „Pradėti“ paspaudimo. „Atsakyti“ vertina įrašytą vertimą; „Praleisti“ įskaičiuoja neatsakytą žodį. Išėjus prieš 60 sekundžių pabaigą, raundo rezultatai ir žodžių sekos atmetami. Pasibaigus laikui jie išsaugomi vienu vietinės saugyklos įrašu.
+Pasirinkite mokinį, sukurkite sąrašą, įrašykite jo kalbas bei žodžių poras. Redagavimo ekrane kalbų nustatymai suskleisti; juos galima išskleisti ir išsaugoti. Vienoje formoje galima pridėti vieną porą arba suvesti kelių porų abiejų kalbų žodžius ta pačia tvarka, atskiriant kableliais. Pridėtos poros iškart matomos apačioje; prie kiekvienos yra kartojimo indeksas nuo 1. Pasirinkus sąrašą rodomas viktorinos pradžios ekranas, kuriame galima pasirinkti 1, 3 arba 5 minutes. Laikas skaičiuojamas tik nuo „Pradėti“ paspaudimo. „Atsakyti“ vertina įrašytą vertimą; „Praleisti“ įskaičiuoja neatsakytą žodį. Išėjus prieš pasirinkto laiko pabaigą, raundo rezultatai ir žodžių sekos atmetami. Pasibaigus laikui jie išsaugomi vienu vietinės saugyklos įrašu.
 
 Duomenys saugomi tik naršyklės `localStorage`, atskirai pagal mokinio ID. Išvalius naršyklės duomenis jie prarandami. Sinchronizavimo, paskyrų ir atsarginių kopijų šioje versijoje nėra. Saugyklos klaida rodoma vartotojui.
 

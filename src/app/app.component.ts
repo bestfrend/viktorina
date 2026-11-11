@@ -7,7 +7,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { LearningData, QuizResult, WordList, emptyLearningData } from './learning-data';
 import { LearningStore } from './learning-store.service';
 import { parseCommaSeparatedPairs } from './pair-input';
-import { QuizSession } from './quiz-session';
+import { QuizMinutes, QuizSession } from './quiz-session';
 import { StudentState } from './student';
 import { StudentStore } from './student-store.service';
 
@@ -26,12 +26,11 @@ export class AppComponent implements OnDestroy {
   listName = '';
   languageA = 'Lietuvių';
   languageB = 'Anglų';
-  wordA = '';
-  wordB = '';
   bulkWordsA = '';
   bulkWordsB = '';
   detailsExpanded = false;
-  pairEntryMode: 'single' | 'bulk' = 'single';
+  selectedMinutes: QuizMinutes = 1;
+  readonly durationOptions: QuizMinutes[] = [1, 3, 5];
   answerText = '';
   listId: string | null = null;
   session: QuizSession | null = null;
@@ -49,6 +48,7 @@ export class AppComponent implements OnDestroy {
   get list(): WordList | undefined { return this.data.lists.find(item => item.id === this.listId && item.studentId === this.student?.id); }
   get previousResults(): QuizResult[] { return this.data.results.filter(item => item.studentId === this.student?.id).slice(-5).reverse(); }
   get remainingSeconds(): number { return Math.ceil(this.remainingMs / 1000); }
+  get remainingClock(): string { return `${Math.floor(this.remainingSeconds / 60)}:${String(this.remainingSeconds % 60).padStart(2, '0')}`; }
   get questionWord(): string { return this.feedbackKind ? this.feedbackWord : this.session?.question() ?? ''; }
 
   reload(): void {
@@ -105,8 +105,6 @@ export class AppComponent implements OnDestroy {
     this.listName = this.list.name;
     this.languageA = this.list.languageA;
     this.languageB = this.list.languageB;
-    this.wordA = '';
-    this.wordB = '';
     this.bulkWordsA = '';
     this.bulkWordsB = '';
     this.detailsExpanded = false;
@@ -132,16 +130,6 @@ export class AppComponent implements OnDestroy {
     }
     this.detailsExpanded = !this.detailsExpanded;
     this.error = '';
-  }
-
-  addPair(): void {
-    if (!this.listId || !this.wordA.trim() || !this.wordB.trim()) return;
-    try {
-      this.data = this.learningStore.addPair(this.data, this.listId, this.wordA, this.wordB);
-      this.wordA = '';
-      this.wordB = '';
-      this.error = '';
-    } catch { this.saveError(); }
   }
 
   addBulkPairs(): void {
@@ -181,8 +169,8 @@ export class AppComponent implements OnDestroy {
   startQuiz(): void {
     if (!this.list?.pairs.length) return;
     this.stopClock();
-    this.session = new QuizSession(this.list);
-    this.remainingMs = 60000;
+    this.session = new QuizSession(this.list, Date.now(), Math.random, this.selectedMinutes);
+    this.remainingMs = this.selectedMinutes * 60000;
     this.answerText = '';
     this.result = null;
     this.error = '';

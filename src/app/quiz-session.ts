@@ -1,6 +1,7 @@
 import { Direction, WordList, WordPair } from './learning-data';
 
 export interface QuizCounts { correct: number; incorrect: number; skipped: number }
+export type QuizMinutes = 1 | 3 | 5;
 const weights = [12, 8, 5, 3, 2, 1];
 
 export function normalizeAnswer(value: string): string {
@@ -25,14 +26,14 @@ export class QuizSession {
   current: WordPair;
   private previousId: string | null = null;
 
-  constructor(readonly list: WordList, now = Date.now(), private readonly random = Math.random) {
+  constructor(readonly list: WordList, now = Date.now(), private readonly random = Math.random, readonly durationMinutes: QuizMinutes = 1) {
     this.streaks = new Map(list.pairs.map(pair => [pair.id, pair.streak]));
     this.startedAt = now;
     this.current = choosePair(list.pairs, this.streaks, null, random);
   }
 
   remaining(now = Date.now()): number {
-    return Math.max(0, 60000 - (now - this.startedAt));
+    return Math.max(0, this.durationMinutes * 60000 - (now - this.startedAt));
   }
 
   question(pair = this.current): string { return this.list.direction === 'a-to-b' ? pair.a : pair.b; }

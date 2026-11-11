@@ -23,6 +23,9 @@ const list = { id: 'l1', studentId: 's1', name: 'Testas', languageA: 'Lietuvių'
 const session = new QuizSession(list, 1000, () => 0);
 assert.equal(session.question(), 'katė');
 assert.equal(session.remaining(61000), 0);
+assert.equal(new QuizSession(list, 1000, () => 0, 3).remaining(61000), 120000);
+assert.equal(new QuizSession(list, 1000, () => 0, 3).remaining(181000), 0);
+assert.equal(new QuizSession(list, 1000, () => 0, 5).remaining(301000), 0);
 assert.equal(session.answer('cat', 61000), null);
 assert.equal(session.answer('wrong', 2000), false);
 assert.equal(session.streaks.get('p1'), 6);
@@ -34,6 +37,7 @@ assert.deepEqual(session.counts, { correct: 1, incorrect: 1, skipped: 1 });
 assert.equal(list.pairs[0].streak, 7, 'An unfinished round must not mutate saved pairs');
 assert.equal(choosePair([{ id: 'a', streak: 0 }, { id: 'b', streak: 5 }], new Map([['a', 0], ['b', 5]]), 'a', () => 0.99).id, 'b');
 assert.deepEqual(parseCommaSeparatedPairs('katė, namas', 'cat, house'), [{ a: 'katė', b: 'cat' }, { a: 'namas', b: 'house' }]);
+assert.deepEqual(parseCommaSeparatedPairs('katė', 'cat'), [{ a: 'katė', b: 'cat' }]);
 assert.throws(() => parseCommaSeparatedPairs('katė, namas', 'cat'), /vienodas žodžių skaičius/);
 assert.throws(() => parseCommaSeparatedPairs('katė,', 'cat, house'), /tuščių žodžių/);
 

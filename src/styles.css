@@ -83,9 +83,9 @@ h2, label { display: block; margin: 0 0 12px; font-size: .95rem; font-weight: 70
 .section-heading h2 { margin: 0; }
 .section-heading .text-button { margin: 0; font-size: .8rem; }
 .direction { color: #60718a; font-size: .83rem; line-height: 1.4; }
-.entry-mode { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin: 20px 0 0; padding: 5px; border-radius: 14px; background: #dfe7f2; }
-.entry-mode button { min-height: 42px; padding: 6px; border: 0; border-radius: 10px; background: transparent; color: #526176; font-weight: 700; cursor: pointer; }
-.entry-mode button.active { background: #fff; color: #205bb8; box-shadow: 2px 2px 6px #bdc8d7; }
+.duration-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-top: 18px; padding: 5px; border-radius: 14px; background: #dfe7f2; }
+.duration-options button { min-height: 42px; padding: 6px; border: 0; border-radius: 10px; background: transparent; color: #526176; font-weight: 700; cursor: pointer; }
+.duration-options button.active { background: #fff; color: #205bb8; box-shadow: 2px 2px 6px #bdc8d7; }
 .bulk-hint { margin: 0 0 3px; color: #60718a; font-size: .84rem; line-height: 1.45; }
 .form-stack textarea { width: 100%; min-width: 0; min-height: 86px; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 14px; background: #fff; color: #24344b; font: inherit; resize: vertical; }
 .pair-list { margin-top: 22px; }
@@ -97,7 +97,7 @@ h2, label { display: block; margin: 0 0 12px; font-size: .95rem; font-weight: 70
 .pair-words { display: grid; grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr); align-items: center; gap: 6px; min-width: 0; }
 .pair-word { display: block; min-width: 0; overflow-x: auto; white-space: nowrap; color: #24344b; font-size: .95rem; font-weight: 600; scrollbar-width: thin; }
 .pair-arrow { color: #60718a; text-align: center; font-size: .95rem; }
-.pair-streak { color: #64748b; font-size: .76rem; }
+.pair-index { flex: none; display: grid; place-items: center; min-width: 28px; height: 28px; padding: 0 5px; border-radius: 9px; background: #e4ecf8; color: #315c9f; font-size: .8rem; font-weight: 700; }
 .icon-button { flex: 0 0 40px; height: 40px; border: 0; border-radius: 10px; background: #f7e6e6; color: #9d2830; font-size: 1.5rem; cursor: pointer; }
 .ready-panel { margin: 30px 0; padding: 25px; border-radius: 20px; background: #f8fafc; box-shadow: inset 4px 4px 9px #d8dee7, inset -4px -4px 9px #fff; text-align: center; }
 .ready-panel p { margin-bottom: 0; color: #60718a; line-height: 1.45; }
