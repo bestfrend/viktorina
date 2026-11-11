@@ -93,13 +93,15 @@ h2, label { display: block; margin: 0 0 12px; font-size: .95rem; font-weight: 70
 .pair-list-heading h3 { margin: 0; font-size: .95rem; }
 .pair-list-heading span { color: #60718a; font-size: .8rem; }
 .pair-items { display: grid; gap: 8px; max-height: min(42vh, 360px); overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; scrollbar-width: thin; }
-.pair-row { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 11px 12px; border-radius: 14px; background: #f8fafc; border: 1px solid #dce3ec; }
+.pair-row { position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 58px; padding: 12px 58px 12px 12px; border-radius: 14px; background: #f8fafc; border: 1px solid #dce3ec; }
 .pair-content { display: grid; gap: 6px; min-width: 0; flex: 1; }
 .pair-words { display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr); align-items: center; gap: 14px; min-width: 0; }
 .pair-word { display: block; min-width: 0; overflow-x: auto; white-space: nowrap; color: #24344b; font-size: .95rem; font-weight: 600; scrollbar-width: thin; }
 .pair-arrow { color: #60718a; text-align: center; font-size: .95rem; }
 .pair-index { flex: none; display: grid; place-items: center; min-width: 28px; height: 28px; padding: 0 5px; border-radius: 9px; background: #e4ecf8; color: #315c9f; font-size: .8rem; font-weight: 700; }
-.icon-button { flex: 0 0 40px; height: 40px; border: 1.5px solid #1f2937; border-radius: 10px; background: transparent; color: #111827; font-size: 1.5rem; cursor: pointer; }
+.icon-button { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1.5px solid #1f2937; border-radius: 10px; background: transparent; color: #111827; cursor: pointer; transition: background-color .15s ease, color .15s ease; }
+.icon-button svg { display: block; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.icon-button:hover, .icon-button:focus-visible { background: #1f2937; color: #fff; }
 .ready-panel { margin: 30px 0; padding: 25px; border-radius: 20px; background: #f8fafc; box-shadow: inset 4px 4px 9px #d8dee7, inset -4px -4px 9px #fff; text-align: center; }
 .ready-panel p { margin-bottom: 0; color: #60718a; line-height: 1.45; }
 .minute { color: #2867d8; font-size: 3rem; font-weight: 800; }

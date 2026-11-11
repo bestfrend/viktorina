@@ -87,7 +87,7 @@
         <div *ngFor="let pair of current.pairs" class="pair-row">
           <div class="pair-content"><div class="pair-words"><span class="pair-word" [title]="current.direction === 'a-to-b' ? pair.a : pair.b">{{ current.direction === 'a-to-b' ? pair.a : pair.b }}</span><span class="pair-arrow" aria-hidden="true">→</span><span class="pair-word" [title]="current.direction === 'a-to-b' ? pair.b : pair.a">{{ current.direction === 'a-to-b' ? pair.b : pair.a }}</span></div></div>
           <span class="pair-index" [attr.aria-label]="'Kartojimo indeksas ' + (pair.streak + 1)">{{ pair.streak + 1 }}</span>
-          <button type="button" class="icon-button" [attr.aria-label]="'Ištrinti porą ' + pair.a + ' – ' + pair.b" (click)="deletePair(pair.id)">×</button>
+          <button type="button" class="icon-button" [attr.aria-label]="'Ištrinti porą ' + pair.a + ' – ' + pair.b" (click)="deletePair(pair.id)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 5l14 14M19 5L5 19" /></svg></button>
         </div>
       </div>
     </div>
