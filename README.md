@@ -32,6 +32,16 @@ Produkcinį paketą `dist/zodziu-praktika/browser` reikia pateikti per HTTPS (ko
 
 Po pirmo sėkmingo įkėlimo ir service worker aktyvavimo programėlės failai pasiekiami be interneto. Mokymosi duomenys saugomi tame įrenginyje.
 
+### Publikavimas per GitHub Pages
+
+Projektą įkelkite į atskirą GitHub saugyklą. Nemokamam GitHub Free planui su Pages ji turi būti vieša. Saugyklos **Settings → Pages → Build and deployment → Source** pasirinkite **GitHub Actions**.
+
+Įkėlus pakeitimus į `main` šaką, `.github/workflows/pages.yml` paleidžia testus, sukuria produkcinį PWA paketą ir jį publikuoja. Publikavimą galima paleisti ir rankiniu būdu per **Actions → Deploy PWA to GitHub Pages → Run workflow**. Darbo eigos rezultatuose rodoma programėlės HTTPS nuoroda.
+
+Darbo eiga nustato `base-href` pagal tikrąjį Pages adresą, todėl programėlės failai ir service worker veikia ir adresu `https://vartotojas.github.io/saugykla/`.
+
+Kompiuteryje ir telefone duomenys yra atskiri. Pakeitus svetainės domeną ar adresą, ankstesni vietiniai duomenys automatiškai neperkeliami.
+
 ### Mokymasis
 
 Pasirinkite mokinį, sukurkite sąrašą, įrašykite jo kalbas bei žodžių poras. Redagavimo ekrane kalbų nustatymai suskleisti; juos galima išskleisti ir išsaugoti. Vienoje formoje galima pridėti vieną porą arba suvesti kelių porų abiejų kalbų žodžius ta pačia tvarka, atskiriant kableliais. Pridėtos poros iškart matomos apačioje; kartojimo indeksas nuo 1 rodomas skaičiumi prie šalinimo mygtuko, o užvedus paaiškinamas užuomina. Pasirinkus sąrašą rodomas viktorinos pradžios ekranas, kuriame galima pasirinkti 1, 3 arba 5 minutes ir krumpliaračiu viršuje atverti žodžių redagavimą. Laikas skaičiuojamas tik nuo „Pradėti“ paspaudimo. Įrašius atsakymą Enter jį patvirtina; tuščiame lauke Enter praleidžia žodį ir įskaičiuoja jį kaip neatsakytą. Telefone galima naudoti matomą „Praleisti“ mygtuką. Išėjus prieš pasirinkto laiko pabaigą, raundo rezultatai ir žodžių sekos atmetami. Pasibaigus laikui jie išsaugomi vienu vietinės saugyklos įrašu kartu su pasirinkta trukme. Seni rezultatai be kiekvieno atsakymo duomenų pašalinami.
