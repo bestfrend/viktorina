@@ -40,6 +40,14 @@ h2, label { display: block; margin: 0 0 12px; font-size: .95rem; font-weight: 70
 .brand > div { display: grid; gap: 2px; }
 .brand-title { font-size: 1.05rem; }
 .brand-subtitle { font-size: .72rem; color: #60718a; font-weight: 500; }
+.install-area { margin: -12px 0 22px; }
+.install-button { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 42px; padding: 10px 14px; border: 1px solid #9bb1d3; border-radius: 12px; background: #f8fafc; color: #205bb8; font-size: .85rem; font-weight: 700; cursor: pointer; }
+.install-button:hover { background: #eaf0fa; }
+.install-button:disabled { opacity: .6; cursor: wait; }
+.install-button svg { flex: none; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.install-help { margin-top: 10px; padding: 15px; border: 1px solid #cbd9ed; border-radius: 14px; background: #f8fafc; font-size: .84rem; line-height: 1.55; }
+.install-help p { margin: 8px 0 0; }
+.install-help .install-help-note { color: #60718a; font-size: .78rem; }
 .card { min-width: 0; }
 .stack, .form-stack, .pair-list { display: grid; gap: 12px; }
 .stack { margin: 20px 0 28px; }

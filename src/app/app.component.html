@@ -4,6 +4,19 @@
     <div><span class="brand-title">Žodžių praktika</span><span class="brand-subtitle">Mokykis savo tempu</span></div>
   </header>
 
+  <div *ngIf="!isInstalled && view !== 'quiz'" class="install-area">
+    <button type="button" class="install-button" [disabled]="installBusy" [attr.aria-expanded]="showInstallHelp" aria-controls="install-help" (click)="installApp()">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4" /></svg>
+      {{ installBusy ? 'Atidaromas diegimas…' : 'Įdiegti programėlę' }}
+    </button>
+    <div *ngIf="showInstallHelp" id="install-help" class="install-help" role="region" aria-label="Programėlės įdiegimas">
+      <strong>Pridėk prie pagrindinio ekrano</strong>
+      <p *ngIf="!isAppleDevice">„Chrome“ meniu <strong>⋮</strong> pasirink <strong>„Pridėti prie pagrindinio ekrano“ → „Įdiegti“</strong>. Kitose naršyklėse ieškok „Įdiegti programą“.</p>
+      <p *ngIf="isAppleDevice">Atverk šį puslapį „Safari“, paspausk <strong>„Bendrinti“ → „Pridėti prie pradžios ekrano“</strong> ir patvirtink „Pridėti“.</p>
+      <p class="install-help-note">Jei nuoroda atidaryta kitos programos lange, pirmiausia atverk ją telefono naršyklėje.</p>
+    </div>
+  </div>
+
   <div *ngIf="error" class="error" role="alert">
     {{ error }}
     <button *ngIf="!storageAvailable" pButton type="button" class="small-button" (click)="reload()">Bandyti dar kartą</button>

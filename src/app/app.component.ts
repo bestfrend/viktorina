@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -13,6 +13,11 @@ import { StudentState } from './student';
 import { StudentStore } from './student-store.service';
 
 type View = 'students' | 'lists' | 'new-list' | 'edit' | 'ready' | 'quiz' | 'results';
+
+interface InstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
 
 @Component({ selector: 'app-root', standalone: true, imports: [CommonModule, FormsModule, ButtonModule, InputTextModule, TextareaModule], templateUrl: './app.component.html' })
 export class AppComponent implements OnDestroy {
@@ -41,12 +46,47 @@ export class AppComponent implements OnDestroy {
   finishedMistakes: QuizMistake[] = [];
   remainingMs = 300000;
   feedbackKind: 'correct' | 'incorrect' | null = null;
+  isInstalled = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  readonly isAppleDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  showInstallHelp = false;
+  installBusy = false;
+  private installPrompt: InstallPromptEvent | null = null;
   private clock: ReturnType<typeof setInterval> | null = null;
   private feedbackClock: ReturnType<typeof setTimeout> | null = null;
   private audioContext: AudioContext | null = null;
   private lastCountdownSecond = 4;
 
   constructor(private readonly studentStore: StudentStore, private readonly learningStore: LearningStore, private readonly changeDetector: ChangeDetectorRef) { this.reload(); }
+
+  @HostListener('window:beforeinstallprompt', ['$event'])
+  onInstallPrompt(event: Event): void {
+    event.preventDefault();
+    this.installPrompt = event as InstallPromptEvent;
+  }
+
+  @HostListener('window:appinstalled')
+  onAppInstalled(): void {
+    this.isInstalled = true;
+    this.installPrompt = null;
+    this.showInstallHelp = false;
+  }
+
+  async installApp(): Promise<void> {
+    if (this.installBusy) return;
+    const prompt = this.installPrompt;
+    if (!prompt) { this.showInstallHelp = !this.showInstallHelp; return; }
+    this.installPrompt = null;
+    this.installBusy = true;
+    this.showInstallHelp = false;
+    try {
+      await prompt.prompt();
+      await prompt.userChoice;
+    } catch {
+      this.showInstallHelp = true;
+    } finally {
+      this.installBusy = false;
+    }
+  }
 
   get student() { return this.students.students.find(item => item.id === this.students.selectedStudentId); }
   get lists(): WordList[] { return this.data.lists.filter(item => item.studentId === this.student?.id); }
