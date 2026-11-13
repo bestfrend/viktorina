@@ -7,7 +7,8 @@ import { TextareaModule } from 'primeng/textarea';
 import { LearningData, QuizMinutes, QuizResult, WordList, emptyLearningData } from './learning-data';
 import { LearningStore } from './learning-store.service';
 import { parseCommaSeparatedPairs } from './pair-input';
-import { QuizSession } from './quiz-session';
+import { QuizMistake, QuizSession } from './quiz-session';
+import { resultPercent, resultRatio } from './result-scoring';
 import { StudentState } from './student';
 import { StudentStore } from './student-store.service';
 
@@ -28,28 +29,49 @@ export class AppComponent implements OnDestroy {
   languageB = 'Anglų';
   bulkWordsA = '';
   bulkWordsB = '';
+  addedPairsCount = 0;
   detailsExpanded = false;
-  selectedMinutes: QuizMinutes = 1;
+  statisticsTab: 'all' | 'personal' | null = null;
+  selectedMinutes: QuizMinutes = 5;
   readonly durationOptions: QuizMinutes[] = [1, 3, 5];
   answerText = '';
   listId: string | null = null;
   session: QuizSession | null = null;
   result: QuizResult | null = null;
-  remainingMs = 60000;
-  feedbackWord = '';
+  finishedMistakes: QuizMistake[] = [];
+  remainingMs = 300000;
   feedbackKind: 'correct' | 'incorrect' | null = null;
   private clock: ReturnType<typeof setInterval> | null = null;
   private feedbackClock: ReturnType<typeof setTimeout> | null = null;
+  private audioContext: AudioContext | null = null;
+  private lastCountdownSecond = 4;
 
   constructor(private readonly studentStore: StudentStore, private readonly learningStore: LearningStore, private readonly changeDetector: ChangeDetectorRef) { this.reload(); }
 
   get student() { return this.students.students.find(item => item.id === this.students.selectedStudentId); }
   get lists(): WordList[] { return this.data.lists.filter(item => item.studentId === this.student?.id); }
   get list(): WordList | undefined { return this.data.lists.find(item => item.id === this.listId && item.studentId === this.student?.id); }
-  get previousResults(): QuizResult[] { return this.data.results.filter(item => item.studentId === this.student?.id).slice(-5).reverse(); }
+  get studentResults(): QuizResult[] { return this.data.results.filter(item => item.studentId === this.student?.id).reverse(); }
+  get bestResults(): QuizResult[] {
+    const best = new Map<string, QuizResult>();
+    for (const result of this.studentResults) {
+      if (result.correct < 10) continue;
+      const key = JSON.stringify([result.listId, result.durationMinutes ?? null]);
+      const current = best.get(key);
+      if (!current || resultRatio(result, 'main') > resultRatio(current, 'main') ||
+          (resultRatio(result, 'main') === resultRatio(current, 'main') && result.correct > current.correct)) {
+        best.set(key, result);
+      }
+    }
+    return [...best.values()];
+  }
+  get displayedResults(): QuizResult[] { return this.statisticsTab === 'all' ? this.studentResults : this.bestResults; }
+  mainPercent(result: QuizResult): number { return resultPercent(result, 'main'); }
+  personalPercent(result: QuizResult): number { return resultPercent(result, 'personal'); }
+  listNameForResult(result: QuizResult): string { return this.data.lists.find(list => list.id === result.listId)?.name ?? 'Sąrašas'; }
   get remainingSeconds(): number { return Math.ceil(this.remainingMs / 1000); }
   get remainingClock(): string { return `${Math.floor(this.remainingSeconds / 60)}:${String(this.remainingSeconds % 60).padStart(2, '0')}`; }
-  get questionWord(): string { return this.feedbackKind ? this.feedbackWord : this.session?.question() ?? ''; }
+  get questionWord(): string { return this.session?.question() ?? ''; }
 
   reload(): void {
     try {
@@ -92,9 +114,11 @@ export class AppComponent implements OnDestroy {
       const created = this.learningStore.createList(this.data, this.student.id, this.listName, this.languageA, this.languageB);
       this.data = created.data;
       this.listId = created.list.id;
+      this.addedPairsCount = 0;
       this.detailsExpanded = false;
       this.view = 'edit';
       this.error = '';
+      this.notice = '';
     } catch { this.saveError(); }
   }
 
@@ -107,8 +131,10 @@ export class AppComponent implements OnDestroy {
     this.languageB = this.list.languageB;
     this.bulkWordsA = '';
     this.bulkWordsB = '';
+    this.addedPairsCount = 0;
     this.detailsExpanded = false;
     this.error = '';
+    this.notice = '';
     this.view = 'edit';
   }
 
@@ -142,7 +168,8 @@ export class AppComponent implements OnDestroy {
       this.bulkWordsA = '';
       this.bulkWordsB = '';
       this.error = '';
-      this.notice = `Pridėta porų: ${entries.length}.`;
+      this.notice = '';
+      this.addedPairsCount += entries.length;
     } catch { this.saveError(); }
   }
 
@@ -169,10 +196,13 @@ export class AppComponent implements OnDestroy {
   startQuiz(): void {
     if (!this.list?.pairs.length) return;
     this.stopClock();
+    this.prepareCountdownAudio();
+    this.lastCountdownSecond = 4;
     this.session = new QuizSession(this.list, Date.now(), Math.random, this.selectedMinutes);
     this.remainingMs = this.selectedMinutes * 60000;
     this.answerText = '';
     this.result = null;
+    this.finishedMistakes = [];
     this.error = '';
     this.view = 'quiz';
     this.changeDetector.detectChanges();
@@ -181,20 +211,12 @@ export class AppComponent implements OnDestroy {
   }
 
   answer(): void {
-    if (!this.session || this.feedbackKind) return;
+    if (!this.session) return;
     if (this.session.remaining() === 0) { this.finishQuiz(); return; }
-    const question = this.session.question();
     const correct = this.session.answer(this.answerText);
     if (correct === null) return;
     this.answerText = '';
-    this.feedbackWord = question;
-    this.feedbackKind = correct ? 'correct' : 'incorrect';
-    this.focusAnswer();
-    this.feedbackClock = setTimeout(() => {
-      this.feedbackKind = null;
-      this.feedbackClock = null;
-      this.changeDetector.detectChanges();
-    }, 550);
+    this.showFeedback(correct ? 'correct' : 'incorrect');
   }
 
   onAnswerEnter(event: Event): void {
@@ -205,48 +227,93 @@ export class AppComponent implements OnDestroy {
   }
 
   skip(): void {
-    if (!this.session || this.feedbackKind) return;
+    if (!this.session) return;
     if (this.session.remaining() === 0) { this.finishQuiz(); return; }
-    this.session.skip();
+    if (!this.session.skip()) return;
     this.answerText = '';
-    this.focusAnswer();
+    this.showFeedback('incorrect');
   }
 
-  leaveQuiz(destination: 'lists' | 'edit'): void {
+  leaveQuiz(): void {
     this.stopClock();
     this.session = null;
     this.answerText = '';
     this.feedbackKind = null;
-    this.view = destination === 'edit' ? 'ready' : 'lists';
-    if (destination === 'edit') this.editList();
+    this.view = 'lists';
   }
 
   retrySave(): void {
     if (this.session && this.remainingMs === 0) this.finishQuiz();
   }
 
-  ngOnDestroy(): void { this.stopClock(); }
+  ngOnDestroy(): void {
+    this.stopClock();
+    if (this.audioContext) void this.audioContext.close();
+  }
 
   private tick(): void {
     if (!this.session) return;
     this.remainingMs = this.session.remaining();
     if (this.remainingMs === 0) this.finishQuiz();
+    else this.playCountdownBeep(this.remainingSeconds);
     this.changeDetector.detectChanges();
+  }
+
+  private prepareCountdownAudio(): void {
+    try {
+      this.audioContext ??= new window.AudioContext();
+      if (this.audioContext.state === 'suspended') void this.audioContext.resume().catch(() => {});
+    } catch { this.audioContext = null; }
+  }
+
+  private playCountdownBeep(second: number): void {
+    if (second !== 0 && second !== 10 && (second < 1 || second > 3)) return;
+    if (second === this.lastCountdownSecond) return;
+    this.lastCountdownSecond = second;
+    const audio = this.audioContext;
+    if (!audio || audio.state !== 'running') return;
+    const oscillator = audio.createOscillator();
+    const volume = audio.createGain();
+    const now = audio.currentTime;
+    const duration = second === 0 ? 0.5 : 0.16;
+    oscillator.type = 'sine';
+    oscillator.frequency.value = second === 0 ? 330 : second === 10 ? 440 : 660;
+    volume.gain.setValueAtTime(0.0001, now);
+    volume.gain.exponentialRampToValueAtTime(0.04, now + 0.015);
+    volume.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    oscillator.connect(volume);
+    volume.connect(audio.destination);
+    oscillator.onended = () => { oscillator.disconnect(); volume.disconnect(); };
+    oscillator.start(now);
+    oscillator.stop(now + duration + 0.01);
   }
 
   private focusAnswer(): void {
     this.answerInput?.nativeElement.focus();
   }
 
+  private showFeedback(kind: 'correct' | 'incorrect'): void {
+    if (this.feedbackClock) clearTimeout(this.feedbackClock);
+    this.feedbackKind = kind;
+    this.focusAnswer();
+    this.feedbackClock = setTimeout(() => {
+      this.feedbackKind = null;
+      this.feedbackClock = null;
+      this.changeDetector.detectChanges();
+    }, 300);
+  }
+
   private finishQuiz(): void {
     const session = this.session;
     if (!session || !this.student) return;
+    this.playCountdownBeep(0);
     this.stopClock();
     this.remainingMs = 0;
     try {
-      const completed = this.learningStore.completeRound(this.data, session.list.id, this.student.id, session.streaks, session.counts, session.durationMinutes);
+      const completed = this.learningStore.completeRound(this.data, session.list.id, this.student.id, session.streaks, session.counts, session.durationMinutes, session.attempts);
       this.data = completed.data;
       this.result = completed.result;
+      this.finishedMistakes = [...session.mistakes];
       this.session = null;
       this.feedbackKind = null;
       this.view = 'results';

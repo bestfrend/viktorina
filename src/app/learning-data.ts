@@ -27,6 +27,14 @@ export interface QuizResult {
   correct: number;
   incorrect: number;
   skipped: number;
+  attempts: QuizAttempt[];
+}
+
+export interface QuizAttempt {
+  outcome: 'correct' | 'incorrect' | 'skipped';
+  index: number;
+  promptLength: number;
+  expectedLength: number;
 }
 
 export interface LearningData {

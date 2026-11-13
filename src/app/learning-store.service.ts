@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Direction, LearningData, QuizMinutes, QuizResult, WordList, WordPair, emptyLearningData, makeId } from './learning-data';
+import { Direction, LearningData, QuizAttempt, QuizMinutes, QuizResult, WordList, WordPair, emptyLearningData, makeId } from './learning-data';
 import { PairInput } from './pair-input';
 
 const STORAGE_KEY = 'zodziu-praktika.learning.v1';
@@ -13,7 +13,8 @@ export class LearningStore {
     if (raw === null) return emptyLearningData();
     const parsed: unknown = JSON.parse(raw);
     if (!this.isData(parsed)) throw new Error('Invalid learning data');
-    return parsed;
+    const currentResults = parsed.results.filter(result => Array.isArray(result.attempts));
+    return currentResults.length === parsed.results.length ? parsed : this.save({ ...parsed, results: currentResults });
   }
 
   save(data: LearningData): LearningData {
@@ -70,10 +71,14 @@ export class LearningStore {
     return this.replaceList(data, id, list => ({ ...list, direction }));
   }
 
-  completeRound(data: LearningData, listId: string, studentId: string, streaks: ReadonlyMap<string, number>, counts: Pick<QuizResult, 'correct' | 'incorrect' | 'skipped'>, durationMinutes: QuizMinutes): { data: LearningData; result: QuizResult } {
+  completeRound(data: LearningData, listId: string, studentId: string, streaks: ReadonlyMap<string, number>, counts: Pick<QuizResult, 'correct' | 'incorrect' | 'skipped'>, durationMinutes: QuizMinutes, attempts: readonly QuizAttempt[]): { data: LearningData; result: QuizResult } {
     const list = data.lists.find(item => item.id === listId && item.studentId === studentId);
     if (!list) throw new Error('Unknown list');
-    const result: QuizResult = { id: makeId(), listId, studentId, finishedAt: new Date().toISOString(), durationMinutes, ...counts };
+    if (attempts.length !== counts.correct + counts.incorrect + counts.skipped ||
+        ['correct', 'incorrect', 'skipped'].some(outcome => attempts.filter(attempt => attempt.outcome === outcome).length !== counts[outcome as keyof typeof counts])) {
+      throw new Error('Attempt counts do not match result');
+    }
+    const result: QuizResult = { id: makeId(), listId, studentId, finishedAt: new Date().toISOString(), durationMinutes, ...counts, attempts: [...attempts] };
     const lists = data.lists.map(item => item.id === listId ? {
       ...item, pairs: item.pairs.map(pair => ({ ...pair, streak: streaks.get(pair.id) ?? pair.streak }))
     } : item);
@@ -109,7 +114,15 @@ export class LearningStore {
       const result = entry as Record<string, unknown>;
       return [result['id'], result['studentId'], result['listId'], result['finishedAt']].every(nonempty) &&
         (result['durationMinutes'] === undefined || [1, 3, 5].includes(result['durationMinutes'] as number)) &&
-        [result['correct'], result['incorrect'], result['skipped']].every(count);
+        [result['correct'], result['incorrect'], result['skipped']].every(count) &&
+        (result['attempts'] === undefined || (Array.isArray(result['attempts']) &&
+          result['attempts'].every(attempt => {
+            if (!attempt || typeof attempt !== 'object') return false;
+            const item = attempt as Record<string, unknown>;
+            return ['correct', 'incorrect', 'skipped'].includes(String(item['outcome'])) &&
+              [item['index'], item['promptLength'], item['expectedLength']].every(value => Number.isSafeInteger(value) && (value as number) >= 1);
+          }) && ['correct', 'incorrect', 'skipped'].every(outcome =>
+            (result['attempts'] as QuizAttempt[]).filter(attempt => attempt.outcome === outcome).length === result[outcome])));
     });
   }
 }

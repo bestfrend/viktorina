@@ -15,6 +15,7 @@ async function loadTypeScript(relative) {
 
 const { QuizSession, normalizeAnswer, choosePair } = await loadTypeScript('src/app/quiz-session.ts');
 const { LearningStore } = await loadTypeScript('src/app/learning-store.service.ts');
+const { attemptWeight, resultPercent } = await loadTypeScript('src/app/result-scoring.ts');
 const { parseCommaSeparatedPairs } = await loadTypeScript('src/app/pair-input.ts');
 
 assert.equal(normalizeAnswer('  ŽĄsis  '), 'zasis');
@@ -34,6 +35,29 @@ assert.equal(session.streaks.get('p1'), 7);
 assert.equal(session.skip(4000), true);
 assert.equal(session.streaks.get('p1'), 6);
 assert.deepEqual(session.counts, { correct: 1, incorrect: 1, skipped: 1 });
+assert.deepEqual(session.attempts.map(({ outcome, index, expectedLength }) => ({ outcome, index, expectedLength })), [
+  { outcome: 'incorrect', index: 8, expectedLength: 3 },
+  { outcome: 'correct', index: 7, expectedLength: 3 },
+  { outcome: 'skipped', index: 8, expectedLength: 3 }
+]);
+assert.equal(attemptWeight({ outcome: 'correct', index: 9, promptLength: 1, expectedLength: 9 }, 'personal'), 1 / 6);
+assert.equal(attemptWeight({ outcome: 'correct', index: 1, promptLength: 1, expectedLength: 10 }, 'main'), 1.5);
+assert.equal(attemptWeight({ outcome: 'correct', index: 1, promptLength: 1, expectedLength: 20 }, 'main'), 1.5);
+assert.equal(attemptWeight({ outcome: 'correct', index: 1, promptLength: 1, expectedLength: 21 }, 'main'), 2);
+assert.equal(resultPercent({ attempts: [
+  { outcome: 'correct', index: 1, promptLength: 1, expectedLength: 21 },
+  { outcome: 'incorrect', index: 2, promptLength: 1, expectedLength: 10 },
+  { outcome: 'skipped', index: 7, promptLength: 1, expectedLength: 9 }
+] }, 'main'), 44);
+assert.equal(resultPercent({ attempts: [
+  { outcome: 'correct', index: 1, promptLength: 1, expectedLength: 21 },
+  { outcome: 'incorrect', index: 2, promptLength: 1, expectedLength: 10 },
+  { outcome: 'skipped', index: 7, promptLength: 1, expectedLength: 9 }
+] }, 'personal'), 63);
+assert.deepEqual(session.mistakes, [
+  { entered: '', expected: 'cat' },
+  { entered: 'wrong', expected: 'cat' }
+]);
 assert.equal(list.pairs[0].streak, 7, 'An unfinished round must not mutate saved pairs');
 assert.equal(choosePair([{ id: 'a', streak: 0 }, { id: 'b', streak: 5 }], new Map([['a', 0], ['b', 5]]), 'a', () => 0.99).id, 'b');
 assert.deepEqual(parseCommaSeparatedPairs('katė, namas', 'cat, house'), [{ a: 'katė', b: 'cat' }, { a: 'namas', b: 'house' }]);
@@ -59,17 +83,24 @@ assert.equal(writeCount, beforeBatch + 1, 'A batch of pairs must be persisted in
 assert.equal(store.load().lists[0].pairs.length, 3);
 assert.throws(() => store.createList(data, 's1', 'Kitas', 'Lietuvių', 'lietuvių'), /Languages must differ/);
 const pairId = data.lists[0].pairs[0].id;
-const done = store.completeRound(data, created.list.id, 's1', new Map([[pairId, 3]]), { correct: 3, incorrect: 0, skipped: 0 }, 3);
+const savedAttempts = [
+  { outcome: 'correct', index: 1, promptLength: 4, expectedLength: 3 },
+  { outcome: 'incorrect', index: 2, promptLength: 4, expectedLength: 3 },
+  { outcome: 'skipped', index: 1, promptLength: 4, expectedLength: 3 }
+];
+const done = store.completeRound(data, created.list.id, 's1', new Map([[pairId, 3]]), { correct: 1, incorrect: 1, skipped: 1 }, 3, savedAttempts);
 assert.equal(done.data.lists[0].pairs[0].streak, 3);
-assert.equal(store.load().results[0].correct, 3);
+assert.equal(store.load().results[0].correct, 1);
 assert.equal(store.load().results[0].durationMinutes, 3);
+assert.equal(store.load().results[0].mistakes, undefined, 'The quick-check list stays in the active round');
 const oldResult = { ...done.result };
-delete oldResult.durationMinutes;
-assert.equal(store.save({ ...done.data, results: [oldResult] }).results[0].durationMinutes, undefined);
-assert.equal(store.load().results[0].durationMinutes, undefined, 'Older results without a duration remain readable');
+delete oldResult.attempts;
+store.save({ ...done.data, results: [oldResult] });
+assert.equal(store.load().results.length, 0, 'Old results without per-attempt data are removed');
+assert.equal(store.load().lists.length, 1, 'Removing old results preserves lists and pairs');
 store.save(done.data);
 assert.equal(store.load().lists.filter(item => item.studentId === 's2').length, 0);
 rejectWrites = true;
-assert.throws(() => store.completeRound(done.data, created.list.id, 's1', new Map([[pairId, 4]]), { correct: 1, incorrect: 0, skipped: 0 }, 5), /quota/);
+assert.throws(() => store.completeRound(done.data, created.list.id, 's1', new Map([[pairId, 4]]), { correct: 1, incorrect: 0, skipped: 0 }, 5, savedAttempts.slice(0, 1)), /quota/);
 assert.equal(store.load().results.length, 1, 'Failed storage write must not claim a completed round');
 console.log('Quiz timing, scoring, streaks, weighted choice and atomic local persistence passed');

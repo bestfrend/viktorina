@@ -1,6 +1,7 @@
-import { Direction, QuizMinutes, WordList, WordPair } from './learning-data';
+import { Direction, QuizAttempt, QuizMinutes, WordList, WordPair } from './learning-data';
 
 export interface QuizCounts { correct: number; incorrect: number; skipped: number }
+export interface QuizMistake { entered: string; expected: string }
 const weights = [12, 8, 5, 3, 2, 1];
 
 export function normalizeAnswer(value: string): string {
@@ -21,6 +22,8 @@ export function choosePair(pairs: WordPair[], streaks: ReadonlyMap<string, numbe
 export class QuizSession {
   readonly streaks: Map<string, number>;
   readonly counts: QuizCounts = { correct: 0, incorrect: 0, skipped: 0 };
+  readonly mistakes: QuizMistake[] = [];
+  readonly attempts: QuizAttempt[] = [];
   readonly startedAt: number;
   current: WordPair;
   private previousId: string | null = null;
@@ -44,6 +47,8 @@ export class QuizSession {
     if (this.remaining(now) === 0 || !value.trim()) return null;
     const correct = normalizeAnswer(value) === normalizeAnswer(this.expected());
     this.counts[correct ? 'correct' : 'incorrect']++;
+    if (!correct) this.mistakes.unshift({ entered: value.trim(), expected: this.expected() });
+    this.recordAttempt(correct ? 'correct' : 'incorrect');
     this.advance(correct);
     return correct;
   }
@@ -51,6 +56,8 @@ export class QuizSession {
   skip(now = Date.now()): boolean {
     if (this.remaining(now) === 0) return false;
     this.counts.skipped++;
+    this.mistakes.unshift({ entered: '', expected: this.expected() });
+    this.recordAttempt('skipped');
     this.advance(false);
     return true;
   }
@@ -61,5 +68,14 @@ export class QuizSession {
     this.streaks.set(previous.id, correct ? streak + 1 : Math.max(0, streak - 1));
     this.previousId = previous.id;
     this.current = choosePair(this.list.pairs, this.streaks, this.previousId, this.random);
+  }
+
+  private recordAttempt(outcome: QuizAttempt['outcome']): void {
+    this.attempts.push({
+      outcome,
+      index: (this.streaks.get(this.current.id) ?? this.current.streak) + 1,
+      promptLength: Array.from(this.question().trim()).length,
+      expectedLength: Array.from(this.expected().trim()).length
+    });
   }
 }

@@ -1,6 +1,6 @@
 <main class="page">
   <header class="brand">
-    <span class="brand-mark" aria-hidden="true">Ž</span>
+    <img class="brand-mark" src="icon.svg?v=2" alt="" aria-hidden="true">
     <div><span class="brand-title">Žodžių praktika</span><span class="brand-subtitle">Mokykis savo tempu</span></div>
   </header>
 
@@ -34,16 +34,37 @@
     <p class="eyebrow">{{ student?.name }}</p>
     <h1 id="lists-heading">Mano žodžių sąrašai</h1>
     <p class="intro">Pasirink sąrašą viktorinai arba sukurk naują.</p>
-    <div class="stack" *ngIf="lists.length; else emptyLists">
+    <div class="list-actions"><button pButton type="button" class="primary-action new-list-action" (click)="showNewList()">+ Naujas sąrašas</button></div>
+    <div class="stack list-scroll" *ngIf="lists.length; else emptyLists" role="region" aria-label="Viktorinų sąrašas" tabindex="0">
       <button *ngFor="let item of lists" type="button" class="list-card" (click)="openList(item.id)">
         <strong>{{ item.name }}</strong><span>{{ item.languageA }} ↔ {{ item.languageB }} · {{ item.pairs.length }} poros</span>
       </button>
     </div>
     <ng-template #emptyLists><p class="empty">Dar neturi sąrašų. Sukurk pirmąjį ir įrašyk kelias žodžių poras.</p></ng-template>
-    <button pButton type="button" class="primary-action" (click)="showNewList()">+ Naujas sąrašas</button>
-    <div *ngIf="previousResults.length" class="history">
-      <h2 class="section-title">Paskutiniai rezultatai</h2>
-      <p *ngFor="let previous of previousResults">{{ previous.finishedAt | date:'yyyy-MM-dd' }} · {{ previous.durationMinutes ? previous.durationMinutes + ' min.' : 'trukmė nežinoma' }} · {{ previous.correct }} teisingai · {{ previous.incorrect }} neteisingai · {{ previous.skipped }} neatsakyta</p>
+    <div *ngIf="studentResults.length" class="history">
+      <div class="history-header">
+        <h2 class="section-title">{{ statisticsTab ? 'Statistika' : 'Geriausi rezultatai' }}</h2>
+        <button type="button" class="stats-button" [attr.aria-label]="statisticsTab ? 'Rodyti geriausius rezultatus' : 'Atverti statistiką'" [attr.title]="statisticsTab ? 'Geriausi rezultatai' : 'Statistika'" [attr.aria-pressed]="statisticsTab !== null" (click)="statisticsTab = statisticsTab ? null : 'all'"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20v-8h4v8M10 20V5h4v15M16 20v-6h4v6M3 20h18" /></svg></button>
+      </div>
+      <div *ngIf="statisticsTab" class="statistics-tabs" role="group" aria-label="Statistikos skiltys">
+        <button type="button" [class.active]="statisticsTab === 'all'" [attr.aria-pressed]="statisticsTab === 'all'" (click)="statisticsTab = 'all'">Visi rezultatai</button>
+        <button type="button" [class.active]="statisticsTab === 'personal'" [attr.aria-pressed]="statisticsTab === 'personal'" (click)="statisticsTab = 'personal'">Rezultatai tik sau</button>
+      </div>
+      <div *ngIf="statisticsTab !== 'personal'" class="history-results" role="region" aria-label="Mokinio rezultatų istorija" tabindex="0">
+        <p *ngIf="!displayedResults.length" class="history-empty">Geriausi rezultatai bus rodomi surinkus bent 10 teisingų atsakymų per vieną bandymą.</p>
+        <div *ngFor="let previous of displayedResults" class="history-entry">
+          <div class="history-entry-top"><strong class="history-entry-title">{{ listNameForResult(previous) }}</strong><strong class="history-percent">{{ mainPercent(previous) }} %</strong></div>
+          <div class="history-entry-meta">{{ previous.finishedAt | date:'yyyy-MM-dd' }} · {{ previous.durationMinutes ? previous.durationMinutes + ' min.' : 'trukmė nežinoma' }}</div>
+          <div class="history-counts"><span>Teisingai <strong>{{ previous.correct }}</strong></span><span>Neteisingai <strong>{{ previous.incorrect }}</strong></span><span>Neatsakyta <strong>{{ previous.skipped }}</strong></span></div>
+        </div>
+      </div>
+      <div *ngIf="statisticsTab === 'personal'" class="history-results" role="region" aria-label="Asmeniniai rezultatai" tabindex="0">
+        <div *ngFor="let previous of studentResults" class="history-entry">
+          <div class="history-entry-top"><strong class="history-entry-title">{{ listNameForResult(previous) }}</strong><strong class="history-percent">{{ personalPercent(previous) }} %</strong></div>
+          <div class="history-entry-meta">{{ previous.finishedAt | date:'yyyy-MM-dd' }} · {{ previous.durationMinutes }} min.</div>
+          <div class="history-counts"><span>Teisingai <strong>{{ previous.correct }}</strong></span><span>Neteisingai <strong>{{ previous.incorrect }}</strong></span><span>Neatsakyta <strong>{{ previous.skipped }}</strong></span></div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -63,7 +84,7 @@
     <p class="eyebrow">REDAGAVIMAS</p><h1 id="edit-heading">{{ current.name }}</h1>
     <button type="button" class="details-toggle" [attr.aria-expanded]="detailsExpanded" aria-controls="list-details" (click)="toggleDetails()">
       <span class="details-summary"><span>Pirmoji kalba: <strong>{{ current.languageA }}</strong></span><span>Antroji kalba: <strong>{{ current.languageB }}</strong></span></span>
-      <span class="details-chevron" aria-hidden="true">{{ detailsExpanded ? '⌃' : '⌄' }}</span>
+      <svg class="details-chevron" [class.is-expanded]="detailsExpanded" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" /></svg>
       <span class="sr-only">{{ detailsExpanded ? 'Suskleisti sąrašo nustatymus' : 'Keisti pavadinimą ir kalbas' }}</span>
     </button>
     <form *ngIf="detailsExpanded" id="list-details" (ngSubmit)="saveListDetails()" class="form-stack compact-form details-form">
@@ -80,12 +101,14 @@
       <label for="bulk-words-a">Žodžiai: {{ current.languageA }}</label><textarea pTextarea id="bulk-words-a" name="bulkWordsA" [(ngModel)]="bulkWordsA" rows="3" maxlength="10100" placeholder="katė, namas, obuolys, saulė"></textarea>
       <label for="bulk-words-b">Žodžiai: {{ current.languageB }}</label><textarea pTextarea id="bulk-words-b" name="bulkWordsB" [(ngModel)]="bulkWordsB" rows="3" maxlength="10100" placeholder="cat, house, apple, sun"></textarea>
       <button pButton type="submit" class="primary-action" [disabled]="!bulkWordsA.trim() || !bulkWordsB.trim()">Pridėti poras</button>
+      <p *ngIf="addedPairsCount > 0" class="added-pairs-notice" aria-live="polite">Pridėta porų: {{ addedPairsCount }}.</p>
     </form>
     <div class="pair-list" *ngIf="current.pairs.length">
       <div class="pair-list-heading"><h3>Pridėtos poros</h3><span>Porų: {{ current.pairs.length }}</span></div>
       <div class="pair-items" role="region" aria-label="Pridėtų žodžių porų sąrašas" tabindex="0">
         <div *ngFor="let pair of current.pairs" class="pair-row">
-          <div class="pair-content"><div class="pair-words"><span class="pair-word" [title]="current.direction === 'a-to-b' ? pair.a : pair.b">{{ current.direction === 'a-to-b' ? pair.a : pair.b }}</span><span class="pair-arrow" aria-hidden="true">→</span><span class="pair-word" [title]="current.direction === 'a-to-b' ? pair.b : pair.a">{{ current.direction === 'a-to-b' ? pair.b : pair.a }}</span></div><small class="pair-index">indeksas – {{ pair.streak + 1 }}</small></div>
+          <div class="pair-content"><div class="pair-words"><span class="pair-word" [title]="current.direction === 'a-to-b' ? pair.a : pair.b">{{ current.direction === 'a-to-b' ? pair.a : pair.b }}</span><span class="pair-arrow" aria-hidden="true">→</span><span class="pair-word" [title]="current.direction === 'a-to-b' ? pair.b : pair.a">{{ current.direction === 'a-to-b' ? pair.b : pair.a }}</span></div></div>
+          <span class="pair-index" [attr.aria-label]="'Indeksas ' + (pair.streak + 1)" title="Indeksas">{{ pair.streak + 1 }}</span>
           <button type="button" class="icon-button" [attr.aria-label]="'Ištrinti porą ' + pair.a + ' – ' + pair.b" (click)="deletePair(pair.id)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 5l14 14M19 5L5 19" /></svg></button>
         </div>
       </div>
@@ -95,7 +118,10 @@
   </section>
 
   <section *ngIf="view === 'ready' && list as current" class="card" aria-labelledby="ready-heading">
-    <button type="button" class="text-button" (click)="view = 'lists'">← Sąrašai</button>
+    <div class="ready-nav">
+      <button type="button" class="text-button" (click)="view = 'lists'">← Sąrašai</button>
+      <button type="button" class="settings-button" aria-label="Redaguoti žodžius" title="Redaguoti žodžius" (click)="editList()"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.5l1.1 1.9 2.2.4 1.7-1.1 2.1 2.1-1.1 1.7.4 2.2 1.9 1.1v2.9l-1.9 1.1-.4 2.2 1.1 1.7-2.1 2.1-1.7-1.1-2.2.4-1.1 1.9H9.1L8 20.1l-2.2-.4-1.7 1.1L2 18.7l1.1-1.7-.4-2.2-1.9-1.1v-2.9l1.9-1.1.4-2.2L2 5.8l2.1-2.1 1.7 1.1L8 4.4l1.1-1.9z" transform="translate(1.2 0) scale(.9)"/><circle cx="12" cy="12" r="3" /></svg></button>
+    </div>
     <p class="eyebrow">PASIRUOŠK</p><h1 id="ready-heading">{{ current.name }}</h1>
     <p class="intro">{{ current.languageA }} ↔ {{ current.languageB }} · {{ current.pairs.length }} poros</p>
     <div class="ready-panel"><span class="minute">{{ selectedMinutes }}:00</span><p>Pasirink trukmę. Laikas prasidės, kai paspausi „Pradėti“.</p>
@@ -105,7 +131,6 @@
     </div>
     <p *ngIf="!current.pairs.length" class="empty">Prieš viktoriną pridėk bent vieną žodžių porą.</p>
     <button pButton type="button" class="primary-action" [disabled]="!current.pairs.length" (click)="startQuiz()">Pradėti</button>
-    <button pButton type="button" class="secondary-action" (click)="editList()">Redaguoti žodžius</button>
   </section>
 
   <section *ngIf="view === 'quiz' && session as round" class="card quiz-card" aria-labelledby="quiz-heading">
@@ -115,14 +140,17 @@
     <div class="question" [class.correct]="feedbackKind === 'correct'" [class.incorrect]="feedbackKind === 'incorrect'" aria-live="polite">{{ questionWord }}</div>
     <form (ngSubmit)="answer()" class="form-stack">
       <label for="quiz-answer">Tavo atsakymas</label>
-      <input #answerInput pInputText id="quiz-answer" name="answerText" [(ngModel)]="answerText" (keydown.enter)="onAnswerEnter($event)" [disabled]="remainingMs === 0" maxlength="100" autocomplete="off" autocapitalize="off" placeholder="Įrašyk vertimą">
-      <button pButton type="submit" class="primary-action" [disabled]="!answerText.trim() || !!feedbackKind || remainingMs === 0">Atsakyti</button>
+      <input #answerInput pInputText id="quiz-answer" name="answerText" [(ngModel)]="answerText" (keydown.enter)="onAnswerEnter($event)" [disabled]="remainingMs === 0" maxlength="100" autocomplete="off" autocapitalize="off">
+      <button pButton type="submit" class="primary-action" [disabled]="!answerText.trim() || remainingMs === 0">Atsakyti</button>
     </form>
     <p class="keyboard-hint">Tuščias Enter – praleisti žodį</p>
-    <button pButton type="button" class="secondary-action touch-skip" [disabled]="!!feedbackKind || remainingMs === 0" (click)="skip()">Praleisti</button>
+    <button pButton type="button" class="secondary-action touch-skip" [disabled]="remainingMs === 0" (click)="skip()">Praleisti</button>
     <p class="quiz-counts">{{ round.counts.correct }} teisingai · {{ round.counts.incorrect }} neteisingai · {{ round.counts.skipped }} neatsakyta</p>
+    <div *ngIf="round.mistakes.length" class="quiz-mistakes" role="region" aria-label="Neteisingi ir praleisti vertimai" tabindex="0">
+      <div *ngFor="let mistake of round.mistakes" class="quiz-mistake-line"><span *ngIf="mistake.entered" class="mistake-entered">{{ mistake.entered }}</span><span class="mistake-arrow" aria-hidden="true">→</span><span class="mistake-expected">{{ mistake.expected }}</span></div>
+    </div>
     <button *ngIf="remainingMs === 0 && error" pButton type="button" class="primary-action" (click)="retrySave()">Bandyti išsaugoti rezultatą dar kartą</button>
-    <div class="quiz-exit"><button type="button" class="text-button" (click)="leaveQuiz('edit')">Redaguoti žodžius</button><button type="button" class="text-button" (click)="leaveQuiz('lists')">Grįžti į sąrašus</button></div>
+    <div class="quiz-exit"><button type="button" class="text-button" (click)="leaveQuiz()">Grįžti į sąrašus</button></div>
     <p class="footnote">Išėjus prieš laiko pabaigą šio bandymo rezultatai nebus išsaugoti.</p>
   </section>
 
@@ -130,8 +158,10 @@
     <p class="eyebrow">LAIKAS BAIGĖSI</p><h1 id="results-heading">Puikus darbas!</h1>
     <p class="intro">{{ finished.durationMinutes }} min. bandymo rezultatai išsaugoti šiame įrenginyje.</p>
     <div class="result-grid"><div><strong>{{ finished.correct }}</strong><span>Teisingai</span></div><div><strong>{{ finished.incorrect }}</strong><span>Neteisingai</span></div><div><strong>{{ finished.skipped }}</strong><span>Neatsakyta</span></div></div>
+    <div *ngIf="finishedMistakes.length" class="quiz-mistakes" role="region" aria-label="Neteisingi ir praleisti vertimai" tabindex="0">
+      <div *ngFor="let mistake of finishedMistakes" class="quiz-mistake-line"><span *ngIf="mistake.entered" class="mistake-entered">{{ mistake.entered }}</span><span class="mistake-arrow" aria-hidden="true">→</span><span class="mistake-expected">{{ mistake.expected }}</span></div>
+    </div>
     <button pButton type="button" class="primary-action" (click)="startQuiz()">Bandyti dar kartą</button>
-    <button pButton type="button" class="secondary-action" (click)="editList()">Redaguoti žodžius</button>
     <button type="button" class="text-button centered" (click)="view = 'lists'">Grįžti į sąrašus</button>
   </section>
 </main>
